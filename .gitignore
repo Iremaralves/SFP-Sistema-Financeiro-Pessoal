@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+.turbo
+coverage
+*.local
+.env
+.env.*
+!.env.example
+supabase/.temp
+~/.i2fin
+apps/cli/bin

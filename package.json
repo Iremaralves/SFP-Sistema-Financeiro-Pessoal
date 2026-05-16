@@ -1,0 +1,21 @@
+{
+  "name": "i2-finance",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "db:types": "supabase gen types typescript --local > packages/db/src/database.types.ts",
+    "db:migrate": "supabase db push"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

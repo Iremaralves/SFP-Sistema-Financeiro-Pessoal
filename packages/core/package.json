@@ -1,0 +1,31 @@
+{
+  "name": "@i2fin/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./normalize": "./src/normalize.ts",
+    "./fingerprint": "./src/fingerprint.ts",
+    "./categorize": "./src/categorize.ts",
+    "./parser": "./src/parser.ts",
+    "./duplicate": "./src/duplicate.ts",
+    "./settlement": "./src/settlement.ts",
+    "./reconcile": "./src/reconcile.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@i2fin/schema": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
+  }
+}

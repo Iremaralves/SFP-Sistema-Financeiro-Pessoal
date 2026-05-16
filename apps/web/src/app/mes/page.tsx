@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { toTransactions } from '@/lib/mappers';
 import { calculateSettlement } from '@i2fin/core';
-import type { Transaction } from '@i2fin/schema';
 import { BottomNav } from '@/components/BottomNav';
 
 function fmt(n: number) {
@@ -31,7 +31,7 @@ export default async function MesPage() {
     .eq('household_id', profile.household_id)
     .eq('reference_month', `${month}-01`);
 
-  const transactions = (txRows ?? []) as Transaction[];
+  const transactions = toTransactions(txRows ?? []);
   const settlement = calculateSettlement(transactions, month);
   const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 

@@ -99,7 +99,7 @@ export async function learnRule(
   if (error) throw error;
 
   // Increment hits on existing rule
-  await db.rpc('increment_rule_hits' as never, { p_household_id: householdId, p_pattern: matchPattern });
+  await db.rpc('increment_rule_hits', { p_household_id: householdId, p_pattern: matchPattern });
 }
 
 // ─── Accounts ─────────────────────────────────────────────────────────────────

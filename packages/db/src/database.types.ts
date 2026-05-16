@@ -11,61 +11,78 @@ export type Database = {
         Row: { id: string; name: string; created_at: string };
         Insert: { id?: string; name: string; created_at?: string };
         Update: { id?: string; name?: string };
+        Relationships: [];
       };
       profiles: {
         Row: { id: string; household_id: string; name: string; role: 'admin' | 'operator'; created_at: string };
         Insert: { id: string; household_id: string; name: string; role: 'admin' | 'operator' };
         Update: { name?: string; role?: 'admin' | 'operator' };
+        Relationships: [];
       };
       accounts: {
         Row: { id: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance: number; active: boolean; created_at: string };
         Insert: { id?: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance?: number; active?: boolean };
         Update: { name?: string; kind?: 'credit_card' | 'checking' | 'company'; active?: boolean };
+        Relationships: [];
       };
       categories: {
         Row: { id: string; household_id: string; name: string; default_responsible: string | null };
         Insert: { id?: string; household_id: string; name: string; default_responsible?: string | null };
         Update: { name?: string; default_responsible?: string | null };
+        Relationships: [];
       };
       csv_imports: {
         Row: { id: string; household_id: string; filename: string; account_id: string; imported_at: string; imported_by: string | null; rows_total: number; rows_inserted: number; rows_skipped_duplicate: number; rows_flagged_review: number; rows_auto_assigned: number; raw_content_sha256: string };
         Insert: { id?: string; household_id: string; filename: string; account_id: string; imported_by?: string | null; rows_total: number; rows_inserted: number; rows_skipped_duplicate: number; rows_flagged_review: number; rows_auto_assigned: number; raw_content_sha256: string };
         Update: Record<string, never>;
+        Relationships: [];
       };
       transactions: {
         Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null };
         Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null };
         Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null };
+        Relationships: [];
       };
       recurring_commitments: {
         Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null };
         Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id: string; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null };
         Update: { amount?: number; active?: boolean; notes?: string | null };
+        Relationships: [];
       };
       monthly_obligations: {
         Row: { id: string; household_id: string; recurring_id: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status: string; paid_on: string | null; paid_amount: number | null };
         Insert: { id?: string; household_id: string; recurring_id?: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status?: string };
         Update: { status?: string; paid_on?: string | null; paid_amount?: number | null };
+        Relationships: [];
       };
       categorization_rules: {
         Row: { id: string; household_id: string; match_pattern: string; responsible: string; category_id: string | null; confidence: number; hits: number; created_from_manual: boolean };
         Insert: { id?: string; household_id: string; match_pattern: string; responsible: string; category_id?: string | null; confidence?: number; hits?: number; created_from_manual?: boolean };
         Update: { responsible?: string; confidence?: number; hits?: number };
+        Relationships: [];
       };
       monthly_settlements: {
         Row: { id: string; household_id: string; reference_month: string; iremar_part: number; juliana_part: number; i2_part: number; casal_total: number; total_fatura: number; juliana_transferred: number | null; iremar_transferred: number | null; credit_carried_to_juliana: number; credit_carried_to_iremar: number; pro_labore: number; i2_reimbursements: number; other_income: number; fixed_commitments_total: number; closed_at: string | null; closed_by: string | null };
         Insert: { id?: string; household_id: string; reference_month: string; iremar_part: number; juliana_part: number; i2_part: number; casal_total: number; total_fatura: number; juliana_transferred?: number | null; pro_labore?: number; i2_reimbursements?: number; other_income?: number; fixed_commitments_total?: number };
         Update: { juliana_transferred?: number | null; iremar_transferred?: number | null; closed_at?: string | null };
+        Relationships: [];
       };
       income_records: {
         Row: { id: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month: string | null; created_by: string | null; created_at: string };
         Insert: { id?: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month?: string | null; created_by?: string | null };
         Update: { amount?: number; description?: string };
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
     };
     Functions: {
       get_my_household_id: { Args: Record<string, never>; Returns: string };
       get_my_role: { Args: Record<string, never>; Returns: string };
+      increment_rule_hits: { Args: { p_household_id: string; p_pattern: string }; Returns: void };
     };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };

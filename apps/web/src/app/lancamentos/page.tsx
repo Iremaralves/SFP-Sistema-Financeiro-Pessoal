@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { toTransactions } from '@/lib/mappers';
 import { TransactionList } from '@/components/TransactionList';
 import { BottomNav } from '@/components/BottomNav';
-import type { Transaction } from '@i2fin/schema';
 import Link from 'next/link';
 
 export default async function LancamentosPage() {
@@ -22,7 +22,7 @@ export default async function LancamentosPage() {
     .lte('occurred_on', `${month}-31`)
     .order('occurred_on', { ascending: false });
 
-  const transactions = (txRows ?? []) as Transaction[];
+  const transactions = toTransactions(txRows ?? []);
   const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (

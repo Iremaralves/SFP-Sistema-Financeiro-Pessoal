@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { toTransactions } from '@/lib/mappers';
 import { DashboardAdmin } from '@/components/DashboardAdmin';
 import { DashboardOperator } from '@/components/DashboardOperator';
 
@@ -34,19 +35,21 @@ export default async function DashboardPage() {
     .eq('household_id', profile.household_id)
     .eq('reference_month', `${month}-01`);
 
+  const mappedTx = toTransactions(transactions ?? []);
+
   return (
     <div className="min-h-screen pb-24">
       {profile.role === 'admin' ? (
         <DashboardAdmin
           profile={profile}
-          transactions={transactions ?? []}
+          transactions={mappedTx}
           incomeRecords={incomeRecords ?? []}
           month={month}
         />
       ) : (
         <DashboardOperator
           profile={profile}
-          transactions={transactions ?? []}
+          transactions={mappedTx}
           month={month}
         />
       )}

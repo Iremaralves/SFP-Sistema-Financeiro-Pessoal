@@ -14,8 +14,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "next": "^15.1.4",
     "turbo": "^2.3.3",
     "typescript": "^5.7.3"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "@supabase/supabase-js": "2.47.16"
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import type { SetAllCookies } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@i2fin/db';
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
       {
         cookies: {
           getAll: () => cookieStore.getAll(),
-          setAll: (toSet) => {
+          setAll: (toSet: Parameters<SetAllCookies>[0]) => {
             for (const { name, value, options } of toSet) {
               cookieStore.set(name, value, options);
             }

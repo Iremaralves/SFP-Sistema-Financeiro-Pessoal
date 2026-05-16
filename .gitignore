@@ -10,3 +10,4 @@ coverage
 supabase/.temp
 ~/.i2fin
 apps/cli/bin
+.vercel

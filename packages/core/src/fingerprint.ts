@@ -29,8 +29,8 @@ export async function fingerprint(
     return hex.slice(0, 40);
   }
 
-  // Node.js fallback (no Web Crypto)
-  const { createHash } = await import('node:crypto');
+  // Node.js fallback (no Web Crypto) — webpackIgnore: webpack never bundles this branch
+  const { createHash } = await import(/* webpackIgnore: true */ 'node:crypto');
   return createHash('sha256').update(raw).digest('hex').slice(0, 40);
 }
 

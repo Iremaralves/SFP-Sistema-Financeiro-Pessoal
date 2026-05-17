@@ -4,6 +4,7 @@ import { calculateSettlement } from '@i2fin/core';
 import type { Transaction } from '@i2fin/schema';
 import { BottomNav } from './BottomNav';
 import { TransactionList } from './TransactionList';
+import { LogoutButton } from './LogoutButton';
 
 interface Props {
   profile: { name: string; role: string; household_id: string };
@@ -44,9 +45,12 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month }: 
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.18) 0%, transparent 70%)' }} />
         <div className="flex items-center justify-between mb-1">
           <span className="text-white/40 text-xs uppercase tracking-widest capitalize">{monthLabel}</span>
-          <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.25)' }}>
-            admin
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.25)' }}>
+              admin
+            </span>
+            <LogoutButton />
+          </div>
         </div>
         <h1 className="text-2xl font-bold text-white mt-1">Olá, {firstName} 👋</h1>
       </div>

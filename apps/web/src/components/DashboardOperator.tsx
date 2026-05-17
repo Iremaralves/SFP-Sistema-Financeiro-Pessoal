@@ -4,6 +4,7 @@ import { calculateSettlement } from '@i2fin/core';
 import type { Transaction } from '@i2fin/schema';
 import { BottomNav } from './BottomNav';
 import { TransactionList } from './TransactionList';
+import { LogoutButton } from './LogoutButton';
 import Link from 'next/link';
 
 interface Props {
@@ -39,7 +40,10 @@ export function DashboardOperator({ profile, transactions, month }: Props) {
       {/* Header */}
       <div className="relative px-5 pt-14 pb-6 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(236,72,153,0.18) 0%, transparent 70%)' }} />
-        <span className="text-white/40 text-xs uppercase tracking-widest capitalize">{monthLabel}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-white/40 text-xs uppercase tracking-widest capitalize">{monthLabel}</span>
+          <LogoutButton />
+        </div>
         <h1 className="text-2xl font-bold text-white mt-1">Olá, {firstName} 👋</h1>
       </div>
 

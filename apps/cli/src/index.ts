@@ -2,7 +2,7 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { requireAuth, cmdLogin } from './auth.js';
-import { cmdImportar } from './commands/importar.js';
+import { cmdImportar, cmdImportarDir } from './commands/importar.js';
 import { cmdListar } from './commands/listar.js';
 import { cmdCategorizar } from './commands/categorizar.js';
 import { cmdFechar } from './commands/fechar.js';
@@ -25,12 +25,20 @@ program
 
 // ─── importar ─────────────────────────────────────────────────────────────
 program
-  .command('importar <arquivo>')
-  .description('Importar fatura CSV do cartão')
+  .command('importar [arquivo]')
+  .description('Importar fatura CSV do cartão (arquivo ou diretório com --dir)')
   .option('--force', 'Reimportar mesmo se já foi importado')
-  .action(async (arquivo) => {
+  .option('--dir <diretório>', 'Importar todos os CSVs de um diretório')
+  .action(async (arquivo, opts) => {
     const creds = await requireAuth();
-    await cmdImportar(arquivo, creds);
+    if (opts.dir) {
+      await cmdImportarDir(opts.dir, creds);
+    } else if (arquivo) {
+      await cmdImportar(arquivo, creds);
+    } else {
+      console.error(pc.red('✗ Informe um arquivo ou use --dir <diretório>'));
+      process.exit(1);
+    }
   });
 
 // ─── listar ─────────────────────────────────────────────────────────────

@@ -30,7 +30,8 @@ export async function cmdListar(month: string, creds: Credentials, opts: {
     return;
   }
 
-  const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const [ml_y, ml_m] = month.split('-').map(Number);
+  const monthLabel = new Date(ml_y, ml_m - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   console.log(pc.cyan(`\nLançamentos — ${monthLabel} (${filtered.length} registros)\n`));
 
   let total = 0;

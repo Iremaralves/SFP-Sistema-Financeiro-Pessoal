@@ -17,13 +17,15 @@ export default async function MesPage() {
   if (!profile) redirect('/login');
 
   const month = new Date().toISOString().slice(0, 7);
+  const [my, mm] = month.split('-').map(Number);
+  const nextMonth = new Date(my, mm, 1).toISOString().slice(0, 10);
 
   const { data: txRows } = await supabase
     .from('transactions')
     .select('*')
     .eq('household_id', profile.household_id)
     .gte('occurred_on', `${month}-01`)
-    .lte('occurred_on', `${month}-31`);
+    .lt('occurred_on', nextMonth);
 
   const { data: incomeRows } = await supabase
     .from('income_records')

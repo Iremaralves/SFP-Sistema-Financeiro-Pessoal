@@ -8,8 +8,8 @@ import {
   upsertTransaction,
 } from '@i2fin/db';
 import pc from 'picocolors';
-import { readFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import type { Credentials } from '../types.js';
 
 export async function cmdImportar(filePath: string, creds: Credentials): Promise<void> {
@@ -138,4 +138,31 @@ export async function cmdImportar(filePath: string, creds: Credentials): Promise
     console.log(pc.yellow(`\n⚠ ${flagged} lançamento(s) sem responsável definido.`));
     console.log(pc.dim('  Execute: i2fin categorizar'));
   }
+}
+
+export async function cmdImportarDir(dir: string, creds: Credentials): Promise<void> {
+  const absDir = resolve(dir);
+  let files: string[];
+  try {
+    files = readdirSync(absDir)
+      .filter((f) => /^nubank_/i.test(f) && f.toLowerCase().endsWith('.csv'))
+      .map((f) => join(absDir, f))
+      .sort();
+  } catch {
+    console.error(pc.red(`✗ Não foi possível ler o diretório: ${absDir}`));
+    process.exit(1);
+  }
+
+  if (files.length === 0) {
+    console.log(pc.yellow(`⚠ Nenhum arquivo CSV encontrado em: ${absDir}`));
+    return;
+  }
+
+  console.log(pc.cyan(`\n${files.length} arquivo(s) CSV encontrado(s) em ${absDir}`));
+
+  for (const file of files) {
+    await cmdImportar(file, creds);
+  }
+
+  console.log(pc.bold(`\n✓ Todos os arquivos processados.`));
 }

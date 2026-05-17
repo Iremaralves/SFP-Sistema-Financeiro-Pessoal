@@ -19,6 +19,8 @@ export default async function DashboardPage() {
   if (!profile) redirect('/login');
 
   const month = new Date().toISOString().slice(0, 7);
+  const [dy, dm] = month.split('-').map(Number);
+  const nextMonth = new Date(dy, dm, 1).toISOString().slice(0, 10);
 
   // Fetch transactions for current month
   const { data: transactions } = await supabase
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
     .select('*')
     .eq('household_id', profile.household_id)
     .gte('occurred_on', `${month}-01`)
-    .lte('occurred_on', `${month}-31`)
+    .lt('occurred_on', nextMonth)
     .order('occurred_on', { ascending: false });
 
   const { data: incomeRecords } = await supabase

@@ -11,14 +11,15 @@ export async function getTransactionsByMonth(
   month: string, // "2026-05"
 ) {
   const from = `${month}-01`;
-  const to = `${month}-31`;
+  const [y, m] = month.split('-').map(Number);
+  const nextMonth = new Date(y, m, 1).toISOString().slice(0, 10);
 
   const { data, error } = await db
     .from('transactions')
     .select('*')
     .eq('household_id', householdId)
     .gte('occurred_on', from)
-    .lte('occurred_on', to)
+    .lt('occurred_on', nextMonth)
     .order('occurred_on', { ascending: false });
 
   if (error) throw error;
@@ -48,7 +49,7 @@ export async function upsertTransaction(
     .select()
     .single();
 
-  if (error && error.code === '23505') return null; // duplicate — silently skip
+  if (error && (error.code === '23505' || error.code === 'PGRST116')) return null; // duplicate — silently skip
   if (error) throw error;
   return data;
 }

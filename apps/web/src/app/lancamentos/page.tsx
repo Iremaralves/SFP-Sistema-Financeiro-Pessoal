@@ -14,12 +14,14 @@ export default async function LancamentosPage() {
   if (!profile) redirect('/login');
 
   const month = new Date().toISOString().slice(0, 7);
+  const [ly, lm] = month.split('-').map(Number);
+  const nextMonth = new Date(ly, lm, 1).toISOString().slice(0, 10);
   const { data: txRows } = await supabase
     .from('transactions')
     .select('*')
     .eq('household_id', profile.household_id)
     .gte('occurred_on', `${month}-01`)
-    .lte('occurred_on', `${month}-31`)
+    .lt('occurred_on', nextMonth)
     .order('occurred_on', { ascending: false });
 
   const transactions = toTransactions(txRows ?? []);

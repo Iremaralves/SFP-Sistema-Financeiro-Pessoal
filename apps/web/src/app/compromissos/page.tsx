@@ -59,22 +59,21 @@ export default async function CompromissosPage({
 
   const params = await searchParams;
   const meses = gerarMeses();
-  const currentMonth = meses[0]!.value; // mês atual sempre o primeiro
+  const currentMonth = meses[0]!.value;
   const mes = params.mes && meses.some(m => m.value === params.mes)
     ? params.mes
     : currentMonth;
 
   const mesLabel = meses.find(m => m.value === mes)?.label ?? mes;
 
-  // Determinar posição temporal do mês selecionado
+  // Posição temporal do mês selecionado
   const hoje = new Date();
   const todayDay = hoje.getDate();
   const [selY, selM] = mes.split('-').map(Number);
-  const isMesAtual = mes === currentMonth;
-  const isPast = new Date(selY!, selM! - 1, 1) < new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const isPast   = new Date(selY!, selM! - 1, 1) < new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const isFuture = new Date(selY!, selM! - 1, 1) > new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-  // ── Todos os compromissos ativos ──────────────────────────────────────────
+  // Todos os compromissos ativos
   const { data: commitments } = await supabase
     .from('recurring_commitments')
     .select('*')
@@ -82,10 +81,10 @@ export default async function CompromissosPage({
     .eq('active', true)
     .order('due_day', { ascending: true });
 
-  // ── Boleto/PIX: status via monthly_obligations do mês selecionado ─────────
+  // Boleto/PIX: status via monthly_obligations
   const { data: obligations } = await supabase
     .from('monthly_obligations')
-    .select('recurring_id, status, paid_on, paid_amount')
+    .select('recurring_id, status')
     .eq('household_id', profile.household_id)
     .eq('reference_month', mes);
 
@@ -93,7 +92,7 @@ export default async function CompromissosPage({
     (obligations ?? []).map(o => [o.recurring_id, o])
   );
 
-  // ── Cartão crédito: verificar via lançamentos do mês selecionado ──────────
+  // Cartão: status via lançamentos
   const nextMonth = new Date(selY!, selM!, 1).toISOString().slice(0, 10);
   const { data: txRows } = await supabase
     .from('transactions').select('description')
@@ -103,53 +102,46 @@ export default async function CompromissosPage({
 
   const txDescriptions = (txRows ?? []).map(t => t.description.toLowerCase());
 
-  // ── Calcular status de cada compromisso ───────────────────────────────────
   type CommitmentRow = NonNullable<typeof commitments>[0];
   type StatusKey = keyof typeof STATUS_CONFIG;
 
   function getStatus(c: CommitmentRow, isCreditCard: boolean): StatusKey {
-    let isPaid: boolean;
-    if (isCreditCard) {
-      isPaid = txDescriptions.some(d =>
-        d.includes(c.description.toLowerCase().slice(0, 8)) ||
-        c.description.toLowerCase().includes(d.slice(0, 8))
-      );
-    } else {
-      const obl = obligationByRecurringId.get(c.id);
-      isPaid = obl?.status === 'paid';
-    }
+    const isPaid = isCreditCard
+      ? txDescriptions.some(d =>
+          d.includes(c.description.toLowerCase().slice(0, 8)) ||
+          c.description.toLowerCase().includes(d.slice(0, 8))
+        )
+      : obligationByRecurringId.get(c.id)?.status === 'paid';
 
     if (isPaid) return 'paid';
     if (isFuture) return 'upcoming';
     if (isPast) return 'overdue';
-    // Mês atual: comparar dia
     if (c.due_day < todayDay) return 'overdue';
     if (c.due_day === todayDay) return 'today';
     return 'upcoming';
   }
 
-  const rows = (commitments ?? []).map(c => ({
-    commitment: c,
-    status: getStatus(c, c.payment_method === 'credit_card' || !c.payment_method),
-    isPaid: (obligationByRecurringId.get(c.id)?.status === 'paid') ||
-      (c.payment_method === 'credit_card' || !c.payment_method
+  const rows = (commitments ?? []).map(c => {
+    const isCredit = c.payment_method === 'credit_card' || !c.payment_method;
+    return {
+      commitment: c,
+      isCredit,
+      status: getStatus(c, isCredit),
+      isPaid: isCredit
         ? txDescriptions.some(d =>
             d.includes(c.description.toLowerCase().slice(0, 8)) ||
             c.description.toLowerCase().includes(d.slice(0, 8))
           )
-        : false),
-  }));
+        : obligationByRecurringId.get(c.id)?.status === 'paid',
+    };
+  });
 
-  const boletoPixRows = rows.filter(r =>
-    r.commitment.payment_method === 'boleto' || r.commitment.payment_method === 'pix'
-  );
-  const creditRows = rows.filter(r =>
-    r.commitment.payment_method === 'credit_card' || !r.commitment.payment_method
-  );
+  const boletoPixRows = rows.filter(r => !r.isCredit);
+  const creditRows    = rows.filter(r => r.isCredit);
 
   // Métricas boleto/PIX
-  const bpTotal = boletoPixRows.reduce((s, r) => s + Number(r.commitment.amount), 0);
-  const bpPago  = boletoPixRows.filter(r => r.status === 'paid').reduce((s, r) => s + Number(r.commitment.amount), 0);
+  const bpTotal    = boletoPixRows.reduce((s, r) => s + Number(r.commitment.amount), 0);
+  const bpPago     = boletoPixRows.filter(r => r.isPaid).reduce((s, r) => s + Number(r.commitment.amount), 0);
   const bpPendente = bpTotal - bpPago;
   const bpAtrasado = boletoPixRows.filter(r => r.status === 'overdue').reduce((s, r) => s + Number(r.commitment.amount), 0);
 
@@ -172,7 +164,6 @@ export default async function CompromissosPage({
           </Link>
         </div>
 
-        {/* Seletor de mês */}
         <Suspense fallback={null}>
           <FiltroMes meses={meses} mesSelecionado={mes} />
         </Suspense>
@@ -196,8 +187,9 @@ export default async function CompromissosPage({
           </div>
 
           {boletoPixRows.length === 0 ? (
-            <div className="rounded-2xl px-4 py-6 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)' }}>
-              <p className="text-white/25 text-sm">Nenhuma conta por boleto/PIX cadastrada</p>
+            <div className="rounded-2xl px-4 py-6 text-center space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <p className="text-white/30 text-sm">Nenhuma conta por boleto/PIX</p>
+              <p className="text-white/18 text-xs">Toque em <strong className="text-white/30">+ Nova</strong> para cadastrar, ou edite as existentes abaixo</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -221,8 +213,8 @@ export default async function CompromissosPage({
                       <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
                     </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    {/* Info — clica para editar */}
+                    <Link href={`/compromissos/${c.id}`} className="flex-1 min-w-0 active:opacity-70">
                       <p className="text-white text-sm font-medium truncate">{c.description}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px]">{cfg.icon}</span>
@@ -230,7 +222,7 @@ export default async function CompromissosPage({
                         <span className="text-[10px] text-white/20">·</span>
                         <span className="text-[10px] text-white/35">{pmIcon} {recLabel}</span>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Valor + ação */}
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -254,36 +246,50 @@ export default async function CompromissosPage({
         {/* ── Seção Cartão de Crédito ────────────────────────────────────── */}
         {creditRows.length > 0 && (
           <section className="space-y-2">
-            <p className="text-white/50 text-xs font-semibold uppercase tracking-wider px-1">💳 Cartão de crédito</p>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">💳 Cartão de crédito</p>
+              <p className="text-[10px] text-indigo-400/60">Toque para editar tipo</p>
+            </div>
             <div className="space-y-2">
               {creditRows.map(({ commitment: c, status }) => {
                 const cfg = STATUS_CONFIG[status];
                 return (
-                  <div
+                  <Link
                     key={c.id}
-                    className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}
+                    href={`/compromissos/${c.id}`}
+                    className="rounded-2xl px-4 py-3.5 flex items-center gap-3 transition-all active:scale-[0.98]"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                   >
+                    {/* Dia */}
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl flex flex-col items-center justify-center" style={{ background: cfg.bg }}>
                       <span className="text-[9px] font-bold leading-none" style={{ color: cfg.color }}>dia</span>
                       <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
                     </div>
+
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-white/80 text-sm font-medium truncate">{c.description}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-[10px]">{cfg.icon}</span>
                         <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
+                        <span className="text-[10px] text-white/20">·</span>
+                        <span className="text-[10px] text-white/30">💳 {RECURRENCE_LABEL[c.recurrence_type ?? 'monthly']}</span>
                       </div>
                     </div>
-                    <span className="text-sm font-semibold text-white/60 flex-shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(Number(c.amount))}
-                    </span>
-                  </div>
+
+                    {/* Valor + editar */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-semibold text-white/60" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {fmt(Number(c.amount))}
+                      </span>
+                      <span className="text-[10px] text-white/20">✎</span>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
-            <p className="text-white/20 text-[10px] text-center px-2 mt-1">
-              Rastreadas automaticamente via importação do CSV do cartão
+            <p className="text-white/18 text-[10px] text-center px-2 mt-1">
+              Toque em qualquer conta para editar — mude para Boleto/PIX se necessário
             </p>
           </section>
         )}

@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition } from 'react';
 import { actionImportarUpload, actionImportarDrive } from './actions';
 
-type DriveFile = { id: string; name: string; modifiedTime: string; size: string };
+type DriveFile = { id: string; name: string; modifiedTime: string; size: string; imported: boolean };
 type Result = Awaited<ReturnType<typeof actionImportarUpload>>;
 
 interface Props {
@@ -114,27 +114,57 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
             <p className="text-white/30 text-sm text-center py-3">Nenhum CSV na pasta ainda</p>
           ) : (
             <div className="space-y-2">
-              {driveFiles.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <span className="text-sm">📄</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-xs font-medium truncate">{f.name}</p>
-                    <p className="text-white/30 text-[10px]">{fmtDate(f.modifiedTime)} · {fmt(f.size)}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDriveImport(f)}
-                    disabled={isPending}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
-                    style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}
+              {driveFiles.map((f, idx) => {
+                const isNewest = idx === 0;
+                const isPendingImport = !f.imported;
+                const highlight = isNewest && isPendingImport;
+                return (
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all"
+                    style={{
+                      background: highlight ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${highlight ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                    }}
                   >
-                    {importingDriveId === f.id ? '...' : 'Importar'}
-                  </button>
-                </div>
-              ))}
+                    <span className="text-sm">{f.imported ? '✅' : '📄'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-white text-xs font-medium truncate">{f.name}</p>
+                        {highlight && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                            style={{ background: 'rgba(59,130,246,0.25)', color: '#93c5fd' }}>
+                            NOVO
+                          </span>
+                        )}
+                        {f.imported && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                            style={{ background: 'rgba(52,211,153,0.15)', color: 'rgba(52,211,153,0.7)' }}>
+                            já importado
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-white/30 text-[10px]">{fmtDate(f.modifiedTime)} · {fmt(f.size)}</p>
+                    </div>
+                    {!f.imported ? (
+                      <button
+                        onClick={() => handleDriveImport(f)}
+                        disabled={isPending}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
+                        style={{
+                          background: highlight ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.15)',
+                          color: '#93c5fd',
+                          border: '1px solid rgba(59,130,246,0.3)',
+                        }}
+                      >
+                        {importingDriveId === f.id ? '⏳' : '↑ Importar'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-white/20 flex-shrink-0">✓</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -15,6 +15,7 @@ const NAV_OPERATOR = [
   { href: '/dashboard', icon: '⌂', label: 'Início' },
   { href: '/lancamentos', icon: '≡', label: 'Lançamentos' },
   { href: '/lancamentos/novo', icon: '+', label: '' },
+  { href: '/importar', icon: '↑', label: 'Importar' },
   { href: '/contas', icon: '◉', label: 'Contas' },
 ];
 

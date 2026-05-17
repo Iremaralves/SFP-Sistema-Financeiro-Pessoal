@@ -4,8 +4,8 @@ import {
   getIncomeByMonth,
   getSupabaseClient,
   getTransactionsByMonth,
+  toTransactions,
 } from '@i2fin/db';
-import type { Transaction } from '@i2fin/schema';
 import pc from 'picocolors';
 import type { Credentials } from '../types.js';
 
@@ -30,7 +30,8 @@ export async function cmdFechar(month: string, creds: Credentials): Promise<void
     process.exit(1);
   }
 
-  const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const [ml_y, ml_m] = month.split('-').map(Number);
+  const monthLabel = new Date(ml_y, ml_m - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   console.log(pc.cyan(`\nFechamento ${monthLabel.toUpperCase()}\n`));
 
   // Fetch data
@@ -40,7 +41,7 @@ export async function cmdFechar(month: string, creds: Credentials): Promise<void
     getIncomeByMonth(db, householdId, month),
   ]);
 
-  const transactions = txRows as Transaction[];
+  const transactions = toTransactions(txRows);
 
   // Check for unassigned
   const unassigned = transactions.filter((t) => t.responsible === 'unassigned');

@@ -117,6 +117,7 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
               {driveFiles.map((f, idx) => {
                 const isNewest = idx === 0;
                 const isPendingImport = !f.imported;
+                // Todos não importados recebem badge NOVO; o mais recente fica destacado em azul
                 const highlight = isNewest && isPendingImport;
                 return (
                   <div
@@ -131,7 +132,7 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-white text-xs font-medium truncate">{f.name}</p>
-                        {highlight && (
+                        {isPendingImport && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                             style={{ background: 'rgba(59,130,246,0.25)', color: '#93c5fd' }}>
                             NOVO

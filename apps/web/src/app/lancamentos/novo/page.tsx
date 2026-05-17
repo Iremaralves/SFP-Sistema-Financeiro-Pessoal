@@ -49,21 +49,29 @@ export default function NovoLancamentoPage() {
       return;
     }
 
-    const fp = `manual-${date}-${description.toLowerCase().slice(0, 20)}-${amount}-${Date.now()}`;
+    const parsedAmount = parseFloat(amount.replace(',', '.'));
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Valor inválido. Use números, ex: 49,90');
+      setLoading(false);
+      return;
+    }
+
+    const fp = `manual-${date}-${description.toLowerCase().slice(0, 20)}-${parsedAmount}-${Date.now()}`;
 
     await db.from('transactions').insert({
       household_id: profile.household_id,
       account_id: account.id,
       occurred_on: date,
       description,
-      amount: parseFloat(amount.replace(',', '.')),
+      amount: parsedAmount,
       responsible,
       source: 'manual_pwa',
       fingerprint: fp,
       created_by: user.id,
     });
 
-    router.push('/dashboard');
+    router.push('/lancamentos');
+    router.refresh();
   }
 
   return (

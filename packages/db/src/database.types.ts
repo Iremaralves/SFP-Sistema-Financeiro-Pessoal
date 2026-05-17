@@ -38,15 +38,15 @@ export type Database = {
         Relationships: [];
       };
       transactions: {
-        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null };
-        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null };
-        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null };
+        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null; installment_current: number | null; installment_total: number | null };
+        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null; installment_current?: number | null; installment_total?: number | null };
+        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null; installment_current?: number | null; installment_total?: number | null };
         Relationships: [];
       };
       recurring_commitments: {
-        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null };
-        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id: string; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null };
-        Update: { amount?: number; active?: boolean; notes?: string | null };
+        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string | null; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null; payment_method: 'credit_card' | 'boleto' | 'pix'; recurrence_type: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
+        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id?: string | null; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
+        Update: { amount?: number; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
         Relationships: [];
       };
       monthly_obligations: {

@@ -241,3 +241,82 @@ export async function actionSalvarResponsavel(id: string, responsible: string) {
     .update({ responsible })
     .eq('id', id);
 }
+
+// ─── Busca auto-categorizados recentes (últimos 10 min) ──────────────────
+
+export async function actionBuscarAutoCategorizadas() {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles').select('household_id').eq('id', user.id).single();
+  if (!profile) redirect('/login');
+
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+  const { data } = await supabase
+    .from('transactions')
+    .select('id, description, amount, occurred_on, responsible')
+    .eq('household_id', profile.household_id)
+    .eq('source', 'csv_import')
+    .neq('responsible', 'unassigned')
+    .gte('created_at', tenMinutesAgo)
+    .order('occurred_on', { ascending: false })
+    .limit(50);
+
+  return (data ?? []) as Array<{
+    id: string;
+    description: string;
+    amount: number;
+    occurred_on: string;
+    responsible: string;
+  }>;
+}
+
+// ─── Criar regra de categorização automática ──────────────────────────────
+
+export async function actionCriarRegra(description: string, responsible: string) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles').select('household_id').eq('id', user.id).single();
+  if (!profile) redirect('/login');
+
+  // Padrão: primeiras palavras significativas da descrição (até 20 chars)
+  const pattern = description.toLowerCase().slice(0, 20).trim();
+
+  // Verificar se já existe regra similar
+  const { data: existing } = await supabase
+    .from('categorization_rules')
+    .select('id')
+    .eq('household_id', profile.household_id)
+    .ilike('match_pattern', `%${pattern.slice(0, 10)}%`)
+    .limit(1);
+
+  if (existing && existing.length > 0) return; // já existe
+
+  await supabase.from('categorization_rules').insert({
+    household_id: profile.household_id,
+    match_pattern: pattern,
+    responsible,
+    confidence: 0.85,
+    hits: 1,
+    created_from_manual: true,
+  });
+}
+
+// ─── Salvar info de parcela num lançamento ────────────────────────────────
+
+export async function actionSalvarParcela(id: string, current: number, total: number) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  await supabase
+    .from('transactions')
+    .update({ installment_current: current, installment_total: total })
+    .eq('id', id);
+}

@@ -54,7 +54,7 @@ export function TransactionList({ transactions, showMeta = false }: Props) {
               <p className="text-white text-sm font-medium truncate leading-tight group-hover:text-white/90">
                 {tx.description}
               </p>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <p className="text-white/30 text-xs">
                   {new Date(tx.occurredOn + 'T12:00:00').toLocaleDateString('pt-BR', {
                     day: '2-digit',
@@ -62,6 +62,12 @@ export function TransactionList({ transactions, showMeta = false }: Props) {
                     ...(showMeta ? { year: 'numeric' } : {}),
                   })}
                 </p>
+                {tx.installmentCurrent && tx.installmentTotal && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                    style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
+                    {tx.installmentCurrent}/{tx.installmentTotal}
+                  </span>
+                )}
                 {showMeta && src && (
                   <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
                     style={{ background: 'rgba(255,255,255,0.06)', color: src.color }}>

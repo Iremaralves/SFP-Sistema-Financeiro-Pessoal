@@ -19,6 +19,8 @@ export function toTransaction(row: TxRow): Transaction {
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    installmentCurrent: row.installment_current ?? null,
+    installmentTotal: row.installment_total ?? null,
   };
 }
 

@@ -2,7 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { actionSalvarResponsavel, actionBuscarNaoCategorizados } from './actions';
+import {
+  actionSalvarResponsavel,
+  actionBuscarNaoCategorizados,
+  actionBuscarAutoCategorizadas,
+  actionCriarRegra,
+  actionSalvarParcela,
+} from './actions';
 
 const OPCOES = [
   { value: 'juliana', label: 'Juliana',     accent: '#ec4899', bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.4)' },
@@ -11,49 +17,73 @@ const OPCOES = [
   { value: 'i2',      label: 'i2 Soluções', accent: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.4)'  },
 ];
 
-interface Tx { id: string; description: string; amount: number; occurred_on: string }
+const RESP_COLOR: Record<string, string> = {
+  juliana: '#ec4899',
+  iremar:  '#3b82f6',
+  casal:   '#06b6d4',
+  i2:      '#f59e0b',
+};
+
+interface Tx {
+  id: string;
+  description: string;
+  amount: number;
+  occurred_on: string;
+  responsible?: string;
+}
 
 interface Props {
   totalFlagged: number;
+  autoAssigned?: number;
 }
 
-export function CategorizarFlow({ totalFlagged }: Props) {
+export function CategorizarFlow({ totalFlagged, autoAssigned = 0 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [iniciou, setIniciou] = useState(false);
+  // ── Estado global ─────────────────────────────────────────────────────────
+  const [fase, setFase] = useState<'cta' | 'fase1' | 'fase2' | 'concluido'>('cta');
   const [itens, setItens] = useState<Tx[]>([]);
+  const [itens2, setItens2] = useState<Tx[]>([]);
   const [indice, setIndice] = useState(0);
-  const [concluido, setConcluido] = useState(false);
   const [selecionado, setSelecionado] = useState<string | null>(null);
+
+  // ── Estado Fase 2 ─────────────────────────────────────────────────────────
+  const [criarRegra, setCriarRegra] = useState(false);
+  const [eParcelado, setEParcelado] = useState(false);
+  const [parcelaAtual, setParcelaAtual] = useState('');
+  const [parcelaTotal, setParcelaTotal] = useState('');
+  const [resp2Selecionado, setResp2Selecionado] = useState<string | null>(null);
 
   function fmt(n: number) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(n));
   }
-
   function fmtData(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   }
 
-  async function iniciar() {
+  // ── Iniciar Fase 1 ────────────────────────────────────────────────────────
+  async function iniciarFase1() {
     startTransition(async () => {
       const lista = await actionBuscarNaoCategorizados();
       setItens(lista);
-      setIniciou(true);
+      setIndice(0);
+      setFase('fase1');
     });
   }
 
-  async function categorizar(responsible: string) {
+  // ── Categorizar item (Fase 1) ─────────────────────────────────────────────
+  async function categorizarFase1(responsible: string) {
     const tx = itens[indice];
     if (!tx) return;
     setSelecionado(responsible);
 
     startTransition(async () => {
       await actionSalvarResponsavel(tx.id, responsible);
-      await new Promise(r => setTimeout(r, 250)); // feedback visual breve
+      await new Promise(r => setTimeout(r, 200));
 
       if (indice + 1 >= itens.length) {
-        setConcluido(true);
+        await iniciarFase2(); // vai para fase 2 ao terminar fase 1
       } else {
         setIndice(i => i + 1);
         setSelecionado(null);
@@ -61,13 +91,84 @@ export function CategorizarFlow({ totalFlagged }: Props) {
     });
   }
 
-  // ── Concluído ────────────────────────────────────────────────────────────
-  if (concluido) {
+  // ── Iniciar Fase 2 ────────────────────────────────────────────────────────
+  async function iniciarFase2() {
+    if (autoAssigned === 0) {
+      setFase('concluido');
+      return;
+    }
+    startTransition(async () => {
+      const lista = await actionBuscarAutoCategorizadas();
+      if (lista.length === 0) {
+        setFase('concluido');
+        return;
+      }
+      setItens2(lista);
+      setIndice(0);
+      setSelecionado(null);
+      setFase('fase2');
+    });
+  }
+
+  // ── Confirmar item (Fase 2) ───────────────────────────────────────────────
+  async function confirmarFase2(txId: string, description: string, responsible: string) {
+    startTransition(async () => {
+      await actionSalvarResponsavel(txId, responsible);
+
+      if (criarRegra) {
+        await actionCriarRegra(description, responsible);
+      }
+
+      if (eParcelado && parcelaAtual && parcelaTotal) {
+        const cur = parseInt(parcelaAtual);
+        const tot = parseInt(parcelaTotal);
+        if (!isNaN(cur) && !isNaN(tot) && cur > 0 && tot >= cur) {
+          await actionSalvarParcela(txId, cur, tot);
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 200));
+
+      if (indice + 1 >= itens2.length) {
+        setFase('concluido');
+      } else {
+        setIndice(i => i + 1);
+        setCriarRegra(false);
+        setEParcelado(false);
+        setParcelaAtual('');
+        setParcelaTotal('');
+        setResp2Selecionado(null);
+      }
+    });
+  }
+
+  // ── Pular Fase 2 ──────────────────────────────────────────────────────────
+  function pularFase2() {
+    if (indice + 1 >= itens2.length) {
+      setFase('concluido');
+    } else {
+      setIndice(i => i + 1);
+      setCriarRegra(false);
+      setEParcelado(false);
+      setParcelaAtual('');
+      setParcelaTotal('');
+      setResp2Selecionado(null);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER: Concluído
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (fase === 'concluido') {
+    const totalCat = itens.length + itens2.length;
     return (
       <div className="rounded-2xl p-5 text-center space-y-3" style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}>
         <p className="text-4xl">🎉</p>
-        <p className="text-emerald-400 font-semibold">Tudo categorizado!</p>
-        <p className="text-white/40 text-sm">{itens.length} lançamento{itens.length !== 1 ? 's' : ''} categorizados</p>
+        <p className="text-emerald-400 font-semibold">Tudo pronto!</p>
+        <p className="text-white/40 text-sm">
+          {totalCat > 0 ? `${totalCat} lançamento${totalCat !== 1 ? 's' : ''} processados` : 'Importação concluída'}
+        </p>
         <button
           onClick={() => { router.push('/dashboard'); router.refresh(); }}
           className="w-full py-3.5 rounded-2xl font-semibold text-white transition-all active:scale-95 mt-2"
@@ -79,106 +180,296 @@ export function CategorizarFlow({ totalFlagged }: Props) {
     );
   }
 
-  // ── CTA para iniciar ─────────────────────────────────────────────────────
-  if (!iniciou) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER: CTA inicial
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (fase === 'cta') {
+    const hasFase1 = totalFlagged > 0;
+    const hasFase2 = autoAssigned > 0;
+
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-        <div className="flex items-start gap-3 mb-4">
-          <span className="text-2xl mt-0.5">📋</span>
-          <div>
-            <p className="text-amber-300 font-semibold text-sm">
-              {totalFlagged} lançamento{totalFlagged !== 1 ? 's' : ''} sem responsável
-            </p>
-            <p className="text-amber-400/60 text-xs mt-0.5">
-              Precisam ser categorizados para o cálculo ficar correto
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={iniciar}
-          disabled={isPending}
-          className="w-full py-3.5 rounded-2xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
-        >
-          {isPending ? 'Carregando...' : '✓ Categorizar agora'}
-        </button>
-      </div>
-    );
-  }
-
-  // ── Carregando lista ─────────────────────────────────────────────────────
-  if (itens.length === 0) {
-    return (
-      <div className="rounded-2xl p-5 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <p className="text-white/40 text-sm">Carregando lançamentos...</p>
-      </div>
-    );
-  }
-
-  // ── Card de categorização ────────────────────────────────────────────────
-  const tx = itens[indice]!;
-  const progresso = ((indice) / itens.length) * 100;
-
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-      {/* Barra de progresso */}
-      <div className="h-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
-        <div
-          className="h-full transition-all duration-500"
-          style={{ width: `${progresso}%`, background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }}
-        />
-      </div>
-
-      <div className="p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-        {/* Progresso */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-white/40 text-xs uppercase tracking-wider">Categorizar</p>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
-            {indice + 1} de {itens.length}
-          </span>
-        </div>
-
-        {/* Lançamento */}
-        <div className="rounded-xl p-4 mb-4 text-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
-          <p className="text-white font-semibold text-base leading-snug mb-1">{tx.description}</p>
-          <p className="text-2xl font-bold text-white mt-1" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(tx.amount)}</p>
-          <p className="text-white/30 text-xs mt-1">{fmtData(tx.occurred_on)}</p>
-        </div>
-
-        {/* Pergunta */}
-        <p className="text-white/50 text-sm text-center mb-3">De quem é essa compra?</p>
-
-        {/* Botões de escolha */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {OPCOES.map((opt) => (
+      <div className="space-y-2">
+        {hasFase1 && (
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl mt-0.5">📋</span>
+              <div>
+                <p className="text-amber-300 font-semibold text-sm">
+                  {totalFlagged} lançamento{totalFlagged !== 1 ? 's' : ''} sem responsável
+                </p>
+                <p className="text-amber-400/60 text-xs mt-0.5">
+                  Precisam ser categorizados para o cálculo ficar correto
+                </p>
+              </div>
+            </div>
             <button
-              key={opt.value}
-              onClick={() => categorizar(opt.value)}
+              onClick={iniciarFase1}
               disabled={isPending}
-              className="py-4 rounded-2xl font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
-              style={{
-                background: selecionado === opt.value ? opt.bg : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${selecionado === opt.value ? opt.border : 'rgba(255,255,255,0.1)'}`,
-                color: selecionado === opt.value ? opt.accent : 'rgba(255,255,255,0.6)',
-                transform: selecionado === opt.value ? 'scale(0.97)' : 'scale(1)',
-              }}
+              className="w-full py-3.5 rounded-2xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
             >
-              {opt.label}
+              {isPending ? 'Carregando...' : '✓ Categorizar agora'}
             </button>
-          ))}
-        </div>
+          </div>
+        )}
 
-        {/* Pular (pra frente, vira unassigned por enquanto) */}
-        {indice < itens.length - 1 && (
-          <button
-            onClick={() => { setIndice(i => i + 1); setSelecionado(null); }}
-            disabled={isPending}
-            className="w-full mt-3 py-2 text-xs text-white/25 hover:text-white/40 transition-colors"
-          >
-            Pular por agora →
-          </button>
+        {hasFase2 && !hasFase1 && (
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl mt-0.5">🔍</span>
+              <div>
+                <p className="text-indigo-300 font-semibold text-sm">
+                  {autoAssigned} lançamento{autoAssigned !== 1 ? 's' : ''} auto-categorizado{autoAssigned !== 1 ? 's' : ''}
+                </p>
+                <p className="text-indigo-400/60 text-xs mt-0.5">
+                  Verifique se estão corretos e indique parcelas
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={iniciarFase2}
+              disabled={isPending}
+              className="w-full py-3.5 rounded-2xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+            >
+              {isPending ? 'Carregando...' : '✓ Revisar agora'}
+            </button>
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER: Fase 1 — Categorizar sem responsável
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (fase === 'fase1') {
+    if (itens.length === 0) {
+      return (
+        <div className="rounded-2xl p-5 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <p className="text-white/40 text-sm">Carregando lançamentos...</p>
+        </div>
+      );
+    }
+
+    const tx = itens[indice]!;
+    const progresso = (indice / itens.length) * 100;
+
+    return (
+      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="h-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="h-full transition-all duration-500" style={{ width: `${progresso}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
+        </div>
+
+        <div className="p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-white/40 text-xs uppercase tracking-wider">Sem responsável</p>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
+              {indice + 1} de {itens.length}
+            </span>
+          </div>
+
+          <div className="rounded-xl p-4 mb-4 text-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <p className="text-white font-semibold text-base leading-snug mb-1">{tx.description}</p>
+            <p className="text-2xl font-bold text-white mt-1" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(tx.amount)}</p>
+            <p className="text-white/30 text-xs mt-1">{fmtData(tx.occurred_on)}</p>
+          </div>
+
+          <p className="text-white/50 text-sm text-center mb-3">De quem é essa compra?</p>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {OPCOES.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => categorizarFase1(opt.value)}
+                disabled={isPending}
+                className="py-4 rounded-2xl font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: selecionado === opt.value ? opt.bg : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${selecionado === opt.value ? opt.border : 'rgba(255,255,255,0.1)'}`,
+                  color: selecionado === opt.value ? opt.accent : 'rgba(255,255,255,0.6)',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {indice < itens.length - 1 && (
+            <button
+              onClick={() => { setIndice(i => i + 1); setSelecionado(null); }}
+              disabled={isPending}
+              className="w-full mt-3 py-2 text-xs text-white/25 hover:text-white/40 transition-colors"
+            >
+              Pular por agora →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER: Fase 2 — Validar auto-categorizados
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (fase === 'fase2') {
+    if (itens2.length === 0) {
+      return (
+        <div className="rounded-2xl p-5 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <p className="text-white/40 text-sm">Carregando...</p>
+        </div>
+      );
+    }
+
+    const tx = itens2[indice]!;
+    const respAtual = resp2Selecionado ?? tx.responsible ?? 'juliana';
+    const progresso = (indice / itens2.length) * 100;
+    const respColor = RESP_COLOR[respAtual] ?? '#94a3b8';
+
+    return (
+      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.3)' }}>
+        {/* Barra progresso */}
+        <div className="h-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="h-full transition-all duration-500" style={{ width: `${progresso}%`, background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
+        </div>
+
+        <div className="p-4" style={{ background: 'rgba(99,102,241,0.04)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-indigo-300/70 text-xs uppercase tracking-wider">Validar auto-categorizado</p>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
+              {indice + 1} de {itens2.length}
+            </span>
+          </div>
+
+          {/* Card do lançamento */}
+          <div className="rounded-xl p-4 mb-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <p className="text-white font-semibold text-base leading-snug">{tx.description}</p>
+            <p className="text-2xl font-bold text-white mt-1.5" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(tx.amount)}</p>
+            <p className="text-white/30 text-xs mt-1">{fmtData(tx.occurred_on)}</p>
+          </div>
+
+          {/* Responsável atual (pré-preenchido) */}
+          <p className="text-white/40 text-xs mb-2 text-center">Responsável detectado — confirme ou altere:</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {OPCOES.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setResp2Selecionado(opt.value)}
+                disabled={isPending}
+                className="py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: respAtual === opt.value ? opt.bg : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${respAtual === opt.value ? opt.border : 'rgba(255,255,255,0.08)'}`,
+                  color: respAtual === opt.value ? opt.accent : 'rgba(255,255,255,0.4)',
+                }}
+              >
+                {respAtual === opt.value && '✓ '}{opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Toggle: Criar regra */}
+          <button
+            onClick={() => setCriarRegra(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl mb-2 transition-all"
+            style={{
+              background: criarRegra ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${criarRegra ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.07)'}`,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🔄</span>
+              <span className="text-xs font-medium" style={{ color: criarRegra ? '#34d399' : 'rgba(255,255,255,0.45)' }}>
+                Criar regra automática para próximas importações
+              </span>
+            </div>
+            <div
+              className="w-8 h-4 rounded-full transition-all flex-shrink-0"
+              style={{ background: criarRegra ? '#34d399' : 'rgba(255,255,255,0.15)' }}
+            >
+              <div
+                className="w-3 h-3 rounded-full bg-white mt-0.5 transition-all"
+                style={{ marginLeft: criarRegra ? '18px' : '2px' }}
+              />
+            </div>
+          </button>
+
+          {/* Toggle: É parcelado */}
+          <button
+            onClick={() => setEParcelado(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl mb-2 transition-all"
+            style={{
+              background: eParcelado ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${eParcelado ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.07)'}`,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">📦</span>
+              <span className="text-xs font-medium" style={{ color: eParcelado ? '#a5b4fc' : 'rgba(255,255,255,0.45)' }}>
+                É parcelado
+              </span>
+            </div>
+            <div
+              className="w-8 h-4 rounded-full transition-all flex-shrink-0"
+              style={{ background: eParcelado ? '#6366f1' : 'rgba(255,255,255,0.15)' }}
+            >
+              <div
+                className="w-3 h-3 rounded-full bg-white mt-0.5 transition-all"
+                style={{ marginLeft: eParcelado ? '18px' : '2px' }}
+              />
+            </div>
+          </button>
+
+          {/* Campos parcela */}
+          {eParcelado && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-2" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <span className="text-xs text-white/50 flex-shrink-0">Parcela</span>
+              <input
+                type="number" min="1" max="99"
+                value={parcelaAtual}
+                onChange={e => setParcelaAtual(e.target.value)}
+                placeholder="1"
+                className="w-14 rounded-lg px-2 py-1 text-sm text-white text-center focus:outline-none"
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
+              />
+              <span className="text-xs text-white/30">de</span>
+              <input
+                type="number" min="1" max="99"
+                value={parcelaTotal}
+                onChange={e => setParcelaTotal(e.target.value)}
+                placeholder="12"
+                className="w-14 rounded-lg px-2 py-1 text-sm text-white text-center focus:outline-none"
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
+              />
+            </div>
+          )}
+
+          {/* Ações */}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={pularFase2}
+              disabled={isPending}
+              className="flex-1 py-2.5 rounded-xl text-xs text-white/35 hover:text-white/50 transition-colors disabled:opacity-40"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              Pular
+            </button>
+            <button
+              onClick={() => confirmarFase2(tx.id, tx.description, respAtual)}
+              disabled={isPending}
+              className="flex-[2] py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95 disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+            >
+              {isPending ? '...' : `✓ Confirmar — ${OPCOES.find(o => o.value === respAtual)?.label ?? respAtual}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

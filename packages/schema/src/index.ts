@@ -59,6 +59,8 @@ export const Transaction = z.object({
   notes: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  installmentCurrent: z.number().int().nullable().default(null),
+  installmentTotal: z.number().int().nullable().default(null),
 });
 export type Transaction = z.infer<typeof Transaction>;
 

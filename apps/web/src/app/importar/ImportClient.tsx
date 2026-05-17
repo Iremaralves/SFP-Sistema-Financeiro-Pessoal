@@ -97,9 +97,9 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
         </div>
       )}
 
-      {/* Fluxo de categorização — aparece automaticamente se houver itens sem responsável */}
-      {result?.ok && result.flagged > 0 && (
-        <CategorizarFlow totalFlagged={result.flagged} />
+      {/* Fluxo de categorização — aparece para itens sem responsável e/ou auto-categorizados */}
+      {result?.ok && (result.flagged > 0 || result.autoAssigned > 0) && (
+        <CategorizarFlow totalFlagged={result.flagged} autoAssigned={result.autoAssigned} />
       )}
 
       {/* Google Drive — só aparece se configurado */}

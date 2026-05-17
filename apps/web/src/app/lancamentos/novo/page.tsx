@@ -19,6 +19,7 @@ const inputStyle = {
 export default function NovoLancamentoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [responsible, setResponsible] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +43,11 @@ export default function NovoLancamentoPage() {
       .eq('household_id', profile.household_id)
       .eq('kind', 'credit_card')
       .single();
-    if (!account) { setLoading(false); return; }
+    if (!account) {
+      setLoading(false);
+      setError('Nenhuma conta de crédito encontrada. Contate o administrador.');
+      return;
+    }
 
     const fp = `manual-${date}-${description.toLowerCase().slice(0, 20)}-${amount}-${Date.now()}`;
 
@@ -77,19 +82,25 @@ export default function NovoLancamentoPage() {
         <h1 className="text-xl font-bold text-white">Novo lançamento</h1>
       </div>
 
+      {error && (
+        <div className="rounded-2xl p-4 mb-4 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <span className="text-lg">⚠️</span>
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Amount — hero input */}
         <div>
           <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Valor (R$)</label>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*[.,]?[0-9]*"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0,00"
             required
-            inputMode="decimal"
             className="w-full rounded-2xl px-5 py-4 text-white text-3xl font-bold placeholder-white/20 focus:outline-none transition-all"
             style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
             onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}

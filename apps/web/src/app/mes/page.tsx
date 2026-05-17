@@ -23,6 +23,7 @@ export default async function MesPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
+  if (profile.role !== 'admin') redirect('/dashboard');
 
   const month = new Date().toISOString().slice(0, 7);
   const [my, mm] = month.split('-').map(Number);

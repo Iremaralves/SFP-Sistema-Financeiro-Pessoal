@@ -19,6 +19,9 @@ export async function actionDarBaixa(
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
+  // reference_month no banco é tipo DATE — precisa de dia (usa dia 01)
+  const referenceMonthDate = `${referenceMonth}-01`;
+
   // Buscar info do compromisso
   const { data: commitment, error: commitErr } = await supabase
     .from('recurring_commitments')
@@ -39,8 +42,8 @@ export async function actionDarBaixa(
     .select('id, status')
     .eq('household_id', profile.household_id)
     .eq('recurring_id', recurringId)
-    .eq('reference_month', referenceMonth)
-    .maybeSingle(); // maybeSingle não lança erro quando não encontra
+    .eq('reference_month', referenceMonthDate)
+    .maybeSingle();
 
   let dbError;
 
@@ -54,7 +57,7 @@ export async function actionDarBaixa(
     const { error } = await supabase.from('monthly_obligations').insert({
       household_id: profile.household_id,
       recurring_id: recurringId,
-      reference_month: referenceMonth,
+      reference_month: referenceMonthDate,
       due_date: dueDateStr,
       description: commitment.description,
       amount,
@@ -91,7 +94,7 @@ export async function actionDesfazerBaixa(
     .update({ status: 'pending', paid_on: null, paid_amount: null })
     .eq('household_id', profile.household_id)
     .eq('recurring_id', recurringId)
-    .eq('reference_month', referenceMonth);
+    .eq('reference_month', `${referenceMonth}-01`);
 
   revalidatePath('/compromissos');
   return { ok: true as const };

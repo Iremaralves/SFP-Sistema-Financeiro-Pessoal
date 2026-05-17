@@ -86,7 +86,7 @@ export default async function CompromissosPage({
     .from('monthly_obligations')
     .select('recurring_id, status')
     .eq('household_id', profile.household_id)
-    .eq('reference_month', mes);
+    .eq('reference_month', `${mes}-01`);
 
   const obligationByRecurringId = new Map(
     (obligations ?? []).map(o => [o.recurring_id, o])

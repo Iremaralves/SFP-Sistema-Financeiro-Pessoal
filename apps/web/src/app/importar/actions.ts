@@ -202,3 +202,42 @@ export async function listDriveFiles(): Promise<Array<{ id: string; name: string
     return [];
   }
 }
+
+// ─── Busca lançamentos sem responsável do mês atual ───────────────────────
+
+export async function actionBuscarNaoCategorizados() {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase.from('profiles').select('household_id').eq('id', user.id).single();
+  if (!profile) redirect('/login');
+
+  const month = new Date().toISOString().slice(0, 7);
+  const [ly, lm] = month.split('-').map(Number);
+  const nextMonth = new Date(ly!, lm!, 1).toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from('transactions')
+    .select('id, description, amount, occurred_on')
+    .eq('household_id', profile.household_id)
+    .eq('responsible', 'unassigned')
+    .gte('occurred_on', `${month}-01`)
+    .lt('occurred_on', nextMonth)
+    .order('occurred_on', { ascending: false });
+
+  return (data ?? []) as Array<{ id: string; description: string; amount: number; occurred_on: string }>;
+}
+
+// ─── Salva responsável de um lançamento ──────────────────────────────────
+
+export async function actionSalvarResponsavel(id: string, responsible: string) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  await supabase
+    .from('transactions')
+    .update({ responsible })
+    .eq('id', id);
+}

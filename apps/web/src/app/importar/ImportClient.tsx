@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition } from 'react';
 import { actionImportarUpload, actionImportarDrive } from './actions';
+import { CategorizarFlow } from './CategorizarFlow';
 
 type DriveFile = { id: string; name: string; modifiedTime: string; size: string; imported: boolean };
 type Result = Awaited<ReturnType<typeof actionImportarUpload>>;
@@ -84,13 +85,8 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                 <Stat label="Inseridas" value={result.inserted} color="#34d399" />
                 <Stat label="Já existiam" value={result.skipped} color="rgba(255,255,255,0.4)" />
                 <Stat label="Auto-categorizadas" value={result.autoAssigned} color="#93c5fd" />
-                {result.flagged > 0 && <Stat label="Sem responsável ⚠️" value={result.flagged} color="#fbbf24" />}
+                {result.flagged > 0 && <Stat label="Sem responsável" value={result.flagged} color="#fbbf24" />}
               </div>
-              {result.flagged > 0 && (
-                <p className="text-amber-400/70 text-xs mt-2">
-                  {result.flagged} lançamento(s) precisam de responsável — acesse Lançamentos para categorizar.
-                </p>
-              )}
             </div>
           ) : (
             <div className="flex items-start gap-2">
@@ -99,6 +95,11 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Fluxo de categorização — aparece automaticamente se houver itens sem responsável */}
+      {result?.ok && result.flagged > 0 && (
+        <CategorizarFlow totalFlagged={result.flagged} />
       )}
 
       {/* Google Drive — só aparece se configurado */}

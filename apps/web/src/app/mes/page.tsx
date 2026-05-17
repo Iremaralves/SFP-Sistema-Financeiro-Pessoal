@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase-server';
 import { toTransactions } from '@/lib/mappers';
 import { calculateSettlement } from '@i2fin/core';
 import { BottomNav } from '@/components/BottomNav';
+import { ReceitaForm } from './ReceitaForm';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
@@ -35,7 +36,8 @@ export default async function MesPage() {
 
   const transactions = toTransactions(txRows ?? []);
   const settlement = calculateSettlement(transactions, month);
-  const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const [lbl_y, lbl_m] = month.split('-').map(Number);
+  const monthLabel = new Date(lbl_y, lbl_m - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
   const proLabore = (incomeRows ?? []).filter((r) => r.kind === 'pro_labore').reduce((s, r) => s + r.amount, 0);
   const julianaTransf = (incomeRows ?? []).filter((r) => r.kind === 'juliana_transfer').reduce((s, r) => s + r.amount, 0);
@@ -83,14 +85,11 @@ export default async function MesPage() {
           )}
         </Section>
 
-        {/* Bloco C: i2 */}
+        {/* Bloco C: Receitas */}
         {profile.role === 'admin' && (
-          <Section title="C) i2 — Pró-labore">
-            <Row
-              label="Pró-labore recebido"
-              value={proLabore > 0 ? fmt(proLabore) : 'Não registrado'}
-              color="text-emerald-400"
-            />
+          <Section title="C) Receitas do mês">
+            <ReceitaForm month={month} incomeRows={incomeRows ?? []} />
+            <Divider />
             <Row label="Parte i2 na fatura" value={fmt(settlement.i2Part)} color="text-yellow-400" />
           </Section>
         )}

@@ -2,20 +2,12 @@
 
 import type { Transaction } from '@i2fin/schema';
 
-const RESPONSIBLE_COLORS: Record<string, string> = {
-  iremar: 'bg-blue-900/50 text-blue-300',
-  juliana: 'bg-pink-900/50 text-pink-300',
-  casal: 'bg-cyan-900/50 text-cyan-300',
-  i2: 'bg-yellow-900/50 text-yellow-300',
-  unassigned: 'bg-red-900/50 text-red-300',
-};
-
-const RESPONSIBLE_LABELS: Record<string, string> = {
-  iremar: 'Iremar',
-  juliana: 'Juliana',
-  casal: 'Casal',
-  i2: 'i2',
-  unassigned: '?',
+const RESPONSIBLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  iremar:     { label: 'Iremar',   color: '#93c5fd', bg: 'rgba(59,130,246,0.12)' },
+  juliana:    { label: 'Juliana',  color: '#f9a8d4', bg: 'rgba(236,72,153,0.12)' },
+  casal:      { label: 'Casal',    color: '#67e8f9', bg: 'rgba(6,182,212,0.12)'  },
+  i2:         { label: 'i2',       color: '#fcd34d', bg: 'rgba(245,158,11,0.12)' },
+  unassigned: { label: '?',        color: '#fca5a5', bg: 'rgba(239,68,68,0.12)'  },
 };
 
 interface Props {
@@ -25,35 +17,55 @@ interface Props {
 export function TransactionList({ transactions }: Props) {
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-500 text-sm">
+      <div className="text-center py-10 text-white/25 text-sm">
         Nenhum lançamento ainda
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {transactions.map((tx) => (
-        <div
-          key={tx.id}
-          className="bg-slate-800/50 rounded-xl px-4 py-3 flex items-center gap-3"
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-100 text-sm font-medium truncate">{tx.description}</p>
-            <p className="text-slate-500 text-xs mt-0.5">
-              {new Date(tx.occurredOn + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-            </p>
+    <div className="space-y-1.5">
+      {transactions.map((tx) => {
+        const cfg = RESPONSIBLE_CONFIG[tx.responsible] ?? RESPONSIBLE_CONFIG.unassigned!;
+        const isCredit = tx.amount < 0;
+        return (
+          <div
+            key={tx.id}
+            className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            {/* Responsible dot */}
+            <span
+              className="flex-shrink-0 w-2 h-2 rounded-full mt-0.5"
+              style={{ background: cfg.color }}
+            />
+
+            {/* Description + date */}
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate leading-tight">{tx.description}</p>
+              <p className="text-white/30 text-xs mt-0.5">
+                {new Date(tx.occurredOn + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+              </p>
+            </div>
+
+            {/* Badge + amount */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <span
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: cfg.color, background: cfg.bg }}
+              >
+                {cfg.label}
+              </span>
+              <span
+                className="text-sm font-semibold min-w-[70px] text-right"
+                style={{ color: isCredit ? '#34d399' : '#f1f5f9', fontVariantNumeric: 'tabular-nums' }}
+              >
+                {isCredit ? '' : ''}R$&nbsp;{Math.abs(tx.amount).toFixed(2).replace('.', ',')}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${RESPONSIBLE_COLORS[tx.responsible] ?? ''}`}>
-              {RESPONSIBLE_LABELS[tx.responsible] ?? tx.responsible}
-            </span>
-            <span className={`text-sm font-semibold ${tx.amount < 0 ? 'text-emerald-400' : 'text-slate-100'}`}>
-              {tx.amount < 0 ? '-' : ''}R$ {Math.abs(tx.amount).toFixed(2).replace('.', ',')}
-            </span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

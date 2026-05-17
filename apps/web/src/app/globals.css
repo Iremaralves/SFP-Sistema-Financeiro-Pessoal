@@ -2,6 +2,8 @@
 
 :root {
   --radius: 0.75rem;
+  --glass-bg: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.08);
 }
 
 * {
@@ -12,7 +14,17 @@ body {
   overscroll-behavior: none;
 }
 
-/* Mobile-safe bottom padding for nav bar */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

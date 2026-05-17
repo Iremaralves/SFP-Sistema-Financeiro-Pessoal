@@ -16,70 +16,90 @@ function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
 }
 
+const glass = {
+  background: 'rgba(255,255,255,0.06)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.08)',
+} as React.CSSProperties;
+
 export function DashboardOperator({ profile, transactions, month }: Props) {
   const settlement = calculateSettlement(transactions, month);
-  const monthLabel = new Date(`${month}-01`).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const [lbl_y, lbl_m] = month.split('-').map(Number);
+  const monthLabel = new Date(lbl_y, lbl_m - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Juliana's indicator: how is spending trending?
   const julianaRatio = settlement.totalFatura > 0 ? (settlement.julianaPart / settlement.totalFatura) * 100 : 0;
+  const firstName = profile.name.split(' ')[0];
+
+  // juliana-only expenses = julianaPart - casalTotal/2
+  const julianaOwn = Math.max(0, settlement.julianaPart - settlement.casalTotal / 2);
 
   return (
     <>
       {/* Header */}
-      <div className="bg-slate-900 px-4 pt-12 pb-6 border-b border-slate-800">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-slate-400 text-sm capitalize">{monthLabel}</span>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-100">Olá, {profile.name.split(' ')[0]} 👋</h1>
+      <div className="relative px-5 pt-14 pb-6 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(236,72,153,0.18) 0%, transparent 70%)' }} />
+        <span className="text-white/40 text-xs uppercase tracking-widest capitalize">{monthLabel}</span>
+        <h1 className="text-2xl font-bold text-white mt-1">Olá, {firstName} 👋</h1>
       </div>
 
-      <div className="px-4 py-4 space-y-3">
+      <div className="px-4 pb-28 space-y-3">
 
-        {/* Total fatura */}
-        <div className="bg-slate-800/50 rounded-2xl p-4">
-          <p className="text-slate-400 text-xs mb-1 uppercase tracking-wider">Total da fatura</p>
-          <p className="text-3xl font-bold text-slate-100">{fmt(settlement.totalFatura)}</p>
-          <div className="mt-3 bg-slate-700/50 rounded-full h-2 overflow-hidden">
+        {/* Hero — total fatura */}
+        <div className="rounded-3xl p-5 relative overflow-hidden" style={glass}>
+          <div className="absolute top-0 right-0 w-40 h-40 pointer-events-none" style={{ background: 'radial-gradient(circle at 100% 0%, rgba(236,72,153,0.12), transparent 70%)' }} />
+          <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Total da fatura</p>
+          <p className="text-4xl font-bold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(settlement.totalFatura)}</p>
+          {/* Progress bar */}
+          <div className="mt-4 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
             <div
-              className="h-full bg-gradient-to-r from-pink-500 to-pink-600 rounded-full transition-all"
-              style={{ width: `${julianaRatio.toFixed(0)}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(julianaRatio, 100).toFixed(0)}%`, background: 'linear-gradient(90deg, #ec4899, #f472b6)' }}
             />
           </div>
-          <p className="text-xs text-slate-500 mt-1">Sua parte: {julianaRatio.toFixed(0)}% da fatura</p>
+          <p className="text-white/30 text-xs mt-2">Sua parte: {julianaRatio.toFixed(0)}% da fatura</p>
         </div>
 
-        {/* Juliana's part */}
-        <div className="bg-pink-900/20 border border-pink-800/30 rounded-2xl p-4">
-          <p className="text-pink-400/70 text-xs mb-1 uppercase tracking-wider">Sua parte a pagar</p>
-          <p className="text-2xl font-bold text-pink-300">{fmt(settlement.julianaPart)}</p>
-          <p className="text-xs text-pink-400/60 mt-1">
-            Seus gastos {fmt(settlement.iremarPart > 0 ? settlement.julianaPart - settlement.casalTotal / 2 : settlement.julianaPart)} + metade do casal {fmt(settlement.casalTotal / 2)}
-          </p>
+        {/* Sua parte — destaque */}
+        <div className="rounded-2xl p-5" style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.2)' }}>
+          <p className="text-xs uppercase tracking-widest mb-1" style={{ color: 'rgba(244,114,182,0.7)' }}>Sua parte a pagar</p>
+          <p className="text-3xl font-bold" style={{ color: '#f9a8d4', fontVariantNumeric: 'tabular-nums' }}>{fmt(settlement.julianaPart)}</p>
+          <div className="flex gap-4 mt-3">
+            <div>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider">Seus gastos</p>
+              <p className="text-sm font-semibold text-pink-300" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(julianaOwn)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider">Metade casal</p>
+              <p className="text-sm font-semibold text-cyan-300" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(settlement.casalTotal / 2)}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Breakdown */}
-        <div className="bg-slate-800/50 rounded-2xl p-4">
-          <p className="text-slate-400 text-xs mb-3 uppercase tracking-wider">Divisão da fatura</p>
-          <div className="space-y-2">
-            <BreakdownRow label="Seus gastos" amount={settlement.julianaPart - settlement.casalTotal / 2} color="text-pink-400" />
-            <BreakdownRow label="Casal (sua metade)" amount={settlement.casalTotal / 2} color="text-cyan-400" />
-            <BreakdownRow label="Gastos Iremar" amount={settlement.iremarPart} color="text-blue-400" />
-            <BreakdownRow label="i2 Soluções" amount={settlement.i2Part} color="text-yellow-400" />
+        {/* Divisão breakdown */}
+        <div className="rounded-2xl p-4" style={glass}>
+          <p className="text-white/40 text-xs uppercase tracking-widest mb-3">Divisão da fatura</p>
+          <div className="space-y-3">
+            <BreakdownRow label="Seus gastos" amount={julianaOwn} accent="#ec4899" />
+            <BreakdownRow label="Casal (sua metade)" amount={settlement.casalTotal / 2} accent="#06b6d4" />
+            <BreakdownRow label="Gastos Iremar" amount={settlement.iremarPart} accent="#3b82f6" />
+            <BreakdownRow label="i2 Soluções" amount={settlement.i2Part} accent="#f59e0b" />
           </div>
         </div>
 
         {/* Add transaction CTA */}
         <Link
           href="/lancamentos/novo"
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-2xl py-4 font-semibold text-white transition-colors"
+          className="flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold text-white transition-all active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
         >
-          <span className="text-xl">+</span>
+          <span className="text-xl font-light">+</span>
           <span>Adicionar lançamento</span>
         </Link>
 
-        {/* Recent transactions (only Juliana's view) */}
+        {/* Recent transactions */}
         <div>
-          <p className="text-slate-400 text-xs mb-3 uppercase tracking-wider px-1">Lançamentos recentes</p>
+          <p className="text-white/30 text-xs uppercase tracking-widest px-1 mb-3">Lançamentos recentes</p>
           <TransactionList transactions={transactions.slice(0, 10)} />
         </div>
       </div>
@@ -89,11 +109,14 @@ export function DashboardOperator({ profile, transactions, month }: Props) {
   );
 }
 
-function BreakdownRow({ label, amount, color }: { label: string; amount: number; color: string }) {
+function BreakdownRow({ label, amount, accent }: { label: string; amount: number; accent: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-slate-400 text-sm">{label}</span>
-      <span className={`font-medium text-sm ${color}`}>
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+        <span className="text-white/60 text-sm">{label}</span>
+      </div>
+      <span className="font-semibold text-sm text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(amount))}
       </span>
     </div>

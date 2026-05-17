@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const RESPONSIBLE_OPTIONS = [
-  { value: 'juliana', label: 'Juliana', emoji: '👩', color: 'bg-pink-600 border-pink-500' },
-  { value: 'iremar', label: 'Iremar', emoji: '👨', color: 'bg-blue-600 border-blue-500' },
-  { value: 'casal', label: 'Casal', emoji: '👫', color: 'bg-cyan-600 border-cyan-500' },
-  { value: 'i2', label: 'i2', emoji: '🏢', color: 'bg-yellow-600 border-yellow-500' },
+  { value: 'juliana', label: 'Juliana', accent: '#ec4899', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.4)' },
+  { value: 'iremar',  label: 'Iremar',  accent: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.4)'  },
+  { value: 'casal',   label: 'Casal',   accent: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.4)'   },
+  { value: 'i2',      label: 'i2 Soluções', accent: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)' },
 ];
+
+const inputStyle = {
+  background: 'rgba(255,255,255,0.07)',
+  border: '1px solid rgba(255,255,255,0.1)',
+} as React.CSSProperties;
 
 export default function NovoLancamentoPage() {
   const router = useRouter();
@@ -39,7 +44,6 @@ export default function NovoLancamentoPage() {
       .single();
     if (!account) { setLoading(false); return; }
 
-    // Simple fingerprint for manual entries
     const fp = `manual-${date}-${description.toLowerCase().slice(0, 20)}-${amount}-${Date.now()}`;
 
     await db.from('transactions').insert({
@@ -58,16 +62,25 @@ export default function NovoLancamentoPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pt-12 pb-24">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-slate-400 hover:text-slate-200 text-2xl">‹</button>
-        <h1 className="text-xl font-bold">Novo lançamento</h1>
+    <div className="min-h-screen px-4 pt-14 pb-28 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% -5%, rgba(59,130,246,0.1) 0%, transparent 60%)' }} />
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-white/60 hover:text-white transition-colors"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          ‹
+        </button>
+        <h1 className="text-xl font-bold text-white">Novo lançamento</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Amount */}
+        {/* Amount — hero input */}
         <div>
-          <label className="block text-slate-400 text-sm mb-2">Valor (R$)</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Valor (R$)</label>
           <input
             type="number"
             step="0.01"
@@ -77,61 +90,75 @@ export default function NovoLancamentoPage() {
             placeholder="0,00"
             required
             inputMode="decimal"
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 text-slate-100 text-2xl font-bold placeholder-slate-600 focus:outline-none focus:border-blue-500"
+            className="w-full rounded-2xl px-5 py-4 text-white text-3xl font-bold placeholder-white/20 focus:outline-none transition-all"
+            style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-slate-400 text-sm mb-2">Descrição</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Descrição</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Mercado, farmácia, restaurante..."
             required
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-base"
+            className="w-full rounded-xl px-4 py-3.5 text-white placeholder-white/25 text-base focus:outline-none transition-all"
+            style={inputStyle}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
         {/* Date */}
         <div>
-          <label className="block text-slate-400 text-sm mb-2">Data</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Data</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-blue-500 text-base"
+            className="w-full rounded-xl px-4 py-3.5 text-white text-base focus:outline-none transition-all"
+            style={{ ...inputStyle, colorScheme: 'dark' }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
-        {/* Responsible — big buttons */}
+        {/* Responsible */}
         <div>
-          <label className="block text-slate-400 text-sm mb-3">Responsável</label>
-          <div className="grid grid-cols-2 gap-3">
-            {RESPONSIBLE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setResponsible(opt.value)}
-                className={`flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold text-white border-2 transition-all ${
-                  responsible === opt.value
-                    ? `${opt.color} scale-95`
-                    : 'bg-slate-800 border-slate-700'
-                }`}
-              >
-                <span className="text-xl">{opt.emoji}</span>
-                <span>{opt.label}</span>
-              </button>
-            ))}
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-3">Responsável</label>
+          <div className="grid grid-cols-2 gap-2.5">
+            {RESPONSIBLE_OPTIONS.map((opt) => {
+              const isSelected = responsible === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setResponsible(opt.value)}
+                  className="flex items-center justify-center py-4 rounded-2xl font-semibold text-sm transition-all duration-200 active:scale-95"
+                  style={{
+                    background: isSelected ? opt.bg : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${isSelected ? opt.border : 'rgba(255,255,255,0.08)'}`,
+                    color: isSelected ? opt.accent : 'rgba(255,255,255,0.5)',
+                    transform: isSelected ? 'scale(0.97)' : 'scale(1)',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <button
           type="submit"
           disabled={loading || !responsible}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors text-base mt-4"
+          className="w-full font-semibold py-4 rounded-2xl text-white transition-all active:scale-95 disabled:opacity-40 mt-2"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
         >
           {loading ? 'Salvando...' : 'Salvar lançamento'}
         </button>

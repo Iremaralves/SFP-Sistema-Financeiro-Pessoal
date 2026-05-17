@@ -51,7 +51,7 @@ export default async function LancamentosPage() {
       </div>
 
       <div className="px-4 py-4">
-        <TransactionList transactions={transactions} />
+        <TransactionList transactions={transactions} showSearch={true} />
       </div>
 
       <BottomNav role={profile.role as 'admin' | 'operator'} />

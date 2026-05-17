@@ -51,8 +51,8 @@ export type Database = {
       };
       monthly_obligations: {
         Row: { id: string; household_id: string; recurring_id: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status: string; paid_on: string | null; paid_amount: number | null };
-        Insert: { id?: string; household_id: string; recurring_id?: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status?: string };
-        Update: { status?: string; paid_on?: string | null; paid_amount?: number | null };
+        Insert: { id?: string; household_id: string; recurring_id?: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status?: string; paid_on?: string | null; paid_amount?: number | null };
+        Update: { status?: string; paid_on?: string | null; paid_amount?: number | null; amount?: number };
         Relationships: [];
       };
       categorization_rules: {

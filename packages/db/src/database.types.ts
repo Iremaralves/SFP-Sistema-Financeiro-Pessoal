@@ -44,9 +44,9 @@ export type Database = {
         Relationships: [];
       };
       transactions: {
-        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null; installment_current: number | null; installment_total: number | null };
-        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null; installment_current?: number | null; installment_total?: number | null };
-        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null; installment_current?: number | null; installment_total?: number | null };
+        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null; installment_current: number | null; installment_total: number | null; entity_id: string | null };
+        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null };
+        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null };
         Relationships: [];
       };
       recurring_commitments: {
@@ -74,9 +74,9 @@ export type Database = {
         Relationships: [];
       };
       income_records: {
-        Row: { id: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month: string | null; created_by: string | null; created_at: string };
-        Insert: { id?: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month?: string | null; created_by?: string | null };
-        Update: { amount?: number; description?: string };
+        Row: { id: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month: string | null; created_by: string | null; created_at: string; entity_id: string | null };
+        Insert: { id?: string; household_id: string; occurred_on: string; description: string; amount: number; kind: string; reference_month?: string | null; created_by?: string | null; entity_id?: string | null };
+        Update: { amount?: number; description?: string; entity_id?: string | null };
         Relationships: [];
       };
     };

@@ -93,6 +93,17 @@ export default function EditarCompromissoPage({
       accountId = account?.id ?? null;
     }
 
+    // Detectar entity_id com base no responsável
+    const { data: entityRows } = await db
+      .from('entities')
+      .select('id, type')
+      .eq('household_id', profile.household_id)
+      .eq('active', true);
+
+    const i2Entity  = entityRows?.find(e => e.type === 'business');
+    const famEntity = entityRows?.find(e => e.type === 'personal');
+    const entityId  = responsible === 'i2' ? (i2Entity?.id ?? null) : (famEntity?.id ?? null);
+
     await db.from('recurring_commitments').update({
       description,
       amount: parseFloat(amount.replace(',', '.')),
@@ -101,6 +112,7 @@ export default function EditarCompromissoPage({
       payment_method: paymentMethod,
       recurrence_type: recurrenceType,
       account_id: accountId,
+      entity_id: entityId,
     }).eq('id', id);
 
     router.push('/compromissos');

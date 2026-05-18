@@ -32,7 +32,6 @@ const STATUS_CONFIG = {
   upcoming: { label: 'A vencer',   color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', icon: '📅' },
 };
 
-// Gera últimos 12 meses
 function gerarMeses() {
   const meses = [];
   const hoje = new Date();
@@ -48,7 +47,7 @@ function gerarMeses() {
 export default async function CompromissosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string }>;
+  searchParams: Promise<{ mes?: string; entidade?: string }>;
 }) {
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -64,24 +63,45 @@ export default async function CompromissosPage({
     ? params.mes
     : currentMonth;
 
+  // Filtro de entidade: 'todos' | 'pessoal' | 'i2'
+  const entidadeFiltro = params.entidade ?? 'todos';
+
   const mesLabel = meses.find(m => m.value === mes)?.label ?? mes;
 
-  // Posição temporal do mês selecionado
   const hoje = new Date();
   const todayDay = hoje.getDate();
   const [selY, selM] = mes.split('-').map(Number);
   const isPast   = new Date(selY!, selM! - 1, 1) < new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const isFuture = new Date(selY!, selM! - 1, 1) > new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-  // Todos os compromissos ativos
-  const { data: commitments } = await supabase
+  // Buscar entidades do household
+  const { data: entities } = await supabase
+    .from('entities')
+    .select('id, name, type, color')
+    .eq('household_id', profile.household_id)
+    .eq('active', true);
+
+  const entityMap = new Map((entities ?? []).map(e => [e.id, e]));
+  const i2Entity    = (entities ?? []).find(e => e.type === 'business');
+  const famEntity   = (entities ?? []).find(e => e.type === 'personal');
+
+  // Filtrar por entidade
+  let query = supabase
     .from('recurring_commitments')
     .select('*')
     .eq('household_id', profile.household_id)
     .eq('active', true)
     .order('due_day', { ascending: true });
 
-  // Boleto/PIX: status via monthly_obligations
+  if (entidadeFiltro === 'i2' && i2Entity) {
+    query = query.eq('entity_id', i2Entity.id);
+  } else if (entidadeFiltro === 'pessoal' && famEntity) {
+    query = query.eq('entity_id', famEntity.id);
+  }
+
+  const { data: commitments } = await query;
+
+  // Status via monthly_obligations (boleto/pix)
   const { data: obligations } = await supabase
     .from('monthly_obligations')
     .select('recurring_id, status')
@@ -123,9 +143,11 @@ export default async function CompromissosPage({
 
   const rows = (commitments ?? []).map(c => {
     const isCredit = c.payment_method === 'credit_card' || !c.payment_method;
+    const entity = c.entity_id ? entityMap.get(c.entity_id) : null;
     return {
       commitment: c,
       isCredit,
+      entity,
       status: getStatus(c, isCredit),
       isPaid: isCredit
         ? txDescriptions.some(d =>
@@ -145,10 +167,17 @@ export default async function CompromissosPage({
   const bpPendente = bpTotal - bpPago;
   const bpAtrasado = boletoPixRows.filter(r => r.status === 'overdue').reduce((s, r) => s + Number(r.commitment.amount), 0);
 
+  // Tabs de entidade
+  const tabs = [
+    { id: 'todos',   label: 'Todas',          color: '#6366f1' },
+    { id: 'pessoal', label: famEntity?.name ?? 'Família', color: famEntity?.color ?? '#3b82f6' },
+    { id: 'i2',      label: i2Entity?.name ?? 'i2',       color: i2Entity?.color ?? '#f59e0b' },
+  ];
+
   return (
     <div className="min-h-screen pb-28">
       {/* Header */}
-      <div className="relative px-5 pt-14 pb-5 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="relative px-5 pt-14 pb-4 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.14) 0%, transparent 70%)' }} />
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -167,11 +196,36 @@ export default async function CompromissosPage({
         <Suspense fallback={null}>
           <FiltroMes meses={meses} mesSelecionado={mes} />
         </Suspense>
+
+        {/* Filtro de entidade */}
+        <div className="flex gap-2 mt-3">
+          {tabs.map(tab => {
+            const isActive = entidadeFiltro === tab.id;
+            const searchP = new URLSearchParams();
+            if (mes !== currentMonth) searchP.set('mes', mes);
+            if (tab.id !== 'todos') searchP.set('entidade', tab.id);
+            const href = `/compromissos${searchP.toString() ? '?' + searchP.toString() : ''}`;
+            return (
+              <Link
+                key={tab.id}
+                href={href}
+                className="flex-1 py-1.5 rounded-xl text-center text-xs font-semibold transition-all"
+                style={{
+                  background: isActive ? `${tab.color}20` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isActive ? tab.color + '50' : 'rgba(255,255,255,0.08)'}`,
+                  color: isActive ? tab.color : 'rgba(255,255,255,0.35)',
+                }}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-5">
 
-        {/* ── Seção Boleto / PIX ─────────────────────────────────────────── */}
+        {/* ── Seção Boleto / PIX ─────────────────────────────── */}
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">⚡ Boleto / PIX</p>
@@ -193,10 +247,11 @@ export default async function CompromissosPage({
             </div>
           ) : (
             <div className="space-y-2">
-              {boletoPixRows.map(({ commitment: c, status, isPaid }) => {
+              {boletoPixRows.map(({ commitment: c, status, isPaid, entity }) => {
                 const cfg = STATUS_CONFIG[status];
                 const recLabel = RECURRENCE_LABEL[c.recurrence_type ?? 'monthly'] ?? 'Mensal';
                 const pmIcon = PAYMENT_ICON[c.payment_method ?? 'boleto'];
+                const isI2 = entity?.type === 'business';
 
                 return (
                   <div
@@ -204,7 +259,7 @@ export default async function CompromissosPage({
                     className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
                     style={{
                       background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${status === 'overdue' && !isPaid ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                      border: `1px solid ${status === 'overdue' && !isPaid ? 'rgba(239,68,68,0.2)' : isI2 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}`,
                     }}
                   >
                     {/* Dia badge */}
@@ -213,9 +268,16 @@ export default async function CompromissosPage({
                       <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
                     </div>
 
-                    {/* Info — clica para editar */}
+                    {/* Info */}
                     <Link href={`/compromissos/${c.id}`} className="flex-1 min-w-0 active:opacity-70">
-                      <p className="text-white text-sm font-medium truncate">{c.description}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{c.description}</p>
+                        {isI2 && (
+                          <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
+                            i2
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px]">{cfg.icon}</span>
                         <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
@@ -243,7 +305,7 @@ export default async function CompromissosPage({
           )}
         </section>
 
-        {/* ── Seção Cartão de Crédito ────────────────────────────────────── */}
+        {/* ── Seção Cartão de Crédito ────────────────────────── */}
         {creditRows.length > 0 && (
           <section className="space-y-2">
             <div className="flex items-center justify-between px-1">
@@ -251,24 +313,33 @@ export default async function CompromissosPage({
               <p className="text-[10px] text-indigo-400/60">Toque para editar tipo</p>
             </div>
             <div className="space-y-2">
-              {creditRows.map(({ commitment: c, status }) => {
+              {creditRows.map(({ commitment: c, status, entity }) => {
                 const cfg = STATUS_CONFIG[status];
+                const isI2 = entity?.type === 'business';
                 return (
                   <Link
                     key={c.id}
                     href={`/compromissos/${c.id}`}
                     className="rounded-2xl px-4 py-3.5 flex items-center gap-3 transition-all active:scale-[0.98]"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isI2 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                    }}
                   >
-                    {/* Dia */}
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl flex flex-col items-center justify-center" style={{ background: cfg.bg }}>
                       <span className="text-[9px] font-bold leading-none" style={{ color: cfg.color }}>dia</span>
                       <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white/80 text-sm font-medium truncate">{c.description}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-white/80 text-sm font-medium truncate">{c.description}</p>
+                        {isI2 && (
+                          <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
+                            i2
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-[10px]">{cfg.icon}</span>
                         <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
@@ -277,7 +348,6 @@ export default async function CompromissosPage({
                       </div>
                     </div>
 
-                    {/* Valor + editar */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-semibold text-white/60" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {fmt(Number(c.amount))}

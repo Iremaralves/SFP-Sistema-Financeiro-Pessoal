@@ -19,10 +19,16 @@ export type Database = {
         Update: { name?: string; role?: 'admin' | 'operator' };
         Relationships: [];
       };
+      entities: {
+        Row: { id: string; household_id: string; name: string; type: 'personal' | 'business' | 'shared'; color: string; cnpj: string | null; active: boolean; created_at: string };
+        Insert: { id?: string; household_id: string; name: string; type: 'personal' | 'business' | 'shared'; color?: string; cnpj?: string | null; active?: boolean };
+        Update: { name?: string; color?: string; cnpj?: string | null; active?: boolean };
+        Relationships: [];
+      };
       accounts: {
-        Row: { id: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance: number; active: boolean; created_at: string };
-        Insert: { id?: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance?: number; active?: boolean };
-        Update: { name?: string; kind?: 'credit_card' | 'checking' | 'company'; active?: boolean };
+        Row: { id: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance: number; active: boolean; created_at: string; entity_id: string | null };
+        Insert: { id?: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance?: number; active?: boolean; entity_id?: string | null };
+        Update: { name?: string; kind?: 'credit_card' | 'checking' | 'company'; active?: boolean; entity_id?: string | null };
         Relationships: [];
       };
       categories: {
@@ -44,9 +50,9 @@ export type Database = {
         Relationships: [];
       };
       recurring_commitments: {
-        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string | null; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null; payment_method: 'credit_card' | 'boleto' | 'pix'; recurrence_type: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
-        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id?: string | null; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
-        Update: { amount?: number; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual' };
+        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string | null; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null; payment_method: 'credit_card' | 'boleto' | 'pix'; recurrence_type: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id: string | null };
+        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id?: string | null; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null };
+        Update: { amount?: number; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null; description?: string; due_day?: number; responsible?: string; account_id?: string | null };
         Relationships: [];
       };
       monthly_obligations: {

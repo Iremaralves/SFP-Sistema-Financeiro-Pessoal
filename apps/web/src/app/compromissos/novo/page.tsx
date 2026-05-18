@@ -57,6 +57,17 @@ export default function NovoCompromissoPage() {
       accountId = account?.id ?? null;
     }
 
+    // Detectar entity_id com base no responsável
+    const { data: entityRows } = await db
+      .from('entities')
+      .select('id, type')
+      .eq('household_id', profile.household_id)
+      .eq('active', true);
+
+    const i2Entity  = entityRows?.find(e => e.type === 'business');
+    const famEntity = entityRows?.find(e => e.type === 'personal');
+    const entityId  = responsible === 'i2' ? (i2Entity?.id ?? null) : (famEntity?.id ?? null);
+
     await db.from('recurring_commitments').insert({
       household_id: profile.household_id,
       account_id: accountId,
@@ -67,6 +78,7 @@ export default function NovoCompromissoPage() {
       active: true,
       payment_method: paymentMethod,
       recurrence_type: recurrenceType,
+      entity_id: entityId,
     });
     router.push('/compromissos');
   }

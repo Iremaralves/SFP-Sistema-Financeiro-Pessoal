@@ -89,12 +89,16 @@ export async function actionDesfazerBaixa(
     .from('profiles').select('household_id, role').eq('id', user.id).single();
   if (!profile || profile.role !== 'admin') redirect('/dashboard');
 
-  await supabase
+  const { error: desfazerErr } = await supabase
     .from('monthly_obligations')
     .update({ status: 'pending', paid_on: null, paid_amount: null })
     .eq('household_id', profile.household_id)
     .eq('recurring_id', recurringId)
     .eq('reference_month', `${referenceMonth}-01`);
+
+  if (desfazerErr) {
+    return { ok: false as const, error: desfazerErr.message };
+  }
 
   revalidatePath('/compromissos');
   return { ok: true as const };

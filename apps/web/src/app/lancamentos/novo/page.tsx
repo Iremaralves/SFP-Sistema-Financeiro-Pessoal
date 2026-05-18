@@ -72,12 +72,12 @@ export default function NovoLancamentoPage() {
       // Conta Juliana (checking pessoal dela) não aparece para Iremar criar lançamentos
       // Contas visíveis para admin: todas exceto "Conta Juliana"
       // Contas visíveis para operator: apenas credit_card (Nubank)
-      let visibleAccounts: Account[];
-      if (profile.role === 'admin') {
-        visibleAccounts = allAccounts.filter(a => !a.name.toLowerCase().includes('juliana'));
-      } else {
-        visibleAccounts = allAccounts.filter(a => a.kind === 'credit_card');
-      }
+      // Admin (Iremar): credit_card + company. Operator (Juliana): só credit_card.
+      // Filtramos por kind — contas checking não são usadas em lançamentos manuais
+      // e evita dependência frágil de nome para excluir "Conta Juliana".
+      const visibleAccounts: Account[] = profile.role === 'admin'
+        ? allAccounts.filter(a => a.kind === 'credit_card' || a.kind === 'company')
+        : allAccounts.filter(a => a.kind === 'credit_card');
 
       setAccounts(visibleAccounts);
 

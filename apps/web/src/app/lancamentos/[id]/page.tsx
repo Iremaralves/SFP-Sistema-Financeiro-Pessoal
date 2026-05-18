@@ -91,8 +91,10 @@ export default function EditarLancamentoPage() {
         .order('kind');
 
       const allAccounts = (accs ?? []) as Account[];
-      const visibleAccounts = profile.role === 'admin'
-        ? allAccounts.filter(a => !a.name.toLowerCase().includes('juliana'))
+      // Admin: credit_card + company. Operator: só credit_card.
+      // Filtra por kind — evita dependência frágil do nome da conta.
+      const visibleAccounts: Account[] = profile.role === 'admin'
+        ? allAccounts.filter(a => a.kind === 'credit_card' || a.kind === 'company')
         : allAccounts.filter(a => a.kind === 'credit_card');
 
       setAccounts(visibleAccounts);

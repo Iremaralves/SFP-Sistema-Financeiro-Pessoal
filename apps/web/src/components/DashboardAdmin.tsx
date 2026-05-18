@@ -115,12 +115,12 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month }: 
               <span className="text-[10px] text-white/30">p/ pessoa</span>
             </div>
           </div>
-          {/* i2 */}
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-            <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'rgba(252,211,77,0.7)' }}>i2 Soluções</p>
+          {/* i2 — clicável para /empresa */}
+          <a href="/empresa" className="rounded-2xl p-4 block transition-all active:scale-[0.97]" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'rgba(252,211,77,0.7)' }}>i2 Soluções 🏢</p>
             <p className="text-base font-bold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(settlement.i2Part)}</p>
-            <p className="text-[10px] text-white/25 mt-1.5">empresa</p>
-          </div>
+            <p className="text-[10px] mt-1.5" style={{ color: 'rgba(245,158,11,0.5)' }}>Ver empresa ›</p>
+          </a>
         </div>
 
         {/* Juliana deve transferir */}

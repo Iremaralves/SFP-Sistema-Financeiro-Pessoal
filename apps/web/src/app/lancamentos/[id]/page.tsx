@@ -4,12 +4,27 @@ import { createClient } from '@/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
+type AccountKind = 'credit_card' | 'checking' | 'company';
+
+interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  entity_id: string | null;
+}
+
 const RESPONSIBLE_OPTIONS = [
-  { value: 'juliana', label: 'Juliana', accent: '#ec4899', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.4)' },
-  { value: 'iremar',  label: 'Iremar',  accent: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.4)'  },
-  { value: 'casal',   label: 'Casal',   accent: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.4)'   },
-  { value: 'i2',      label: 'i2 Soluções', accent: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)' },
+  { value: 'juliana', label: 'Juliana',      accent: '#ec4899', bg: 'rgba(236,72,153,0.12)',  border: 'rgba(236,72,153,0.4)'  },
+  { value: 'iremar',  label: 'Iremar',       accent: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.4)'  },
+  { value: 'casal',   label: 'Casal',        accent: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.4)'   },
+  { value: 'i2',      label: 'i2 Soluções',  accent: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.4)'  },
 ];
+
+const KIND_ICON: Record<AccountKind, string> = {
+  credit_card: '💳',
+  checking:    '🏦',
+  company:     '🏢',
+};
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.07)',
@@ -22,28 +37,37 @@ export default function EditarLancamentoPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
 
-  const [status, setStatus] = useState<Status>('loading');
-  const [error, setError] = useState('');
+  const [status, setStatus]       = useState<Status>('loading');
+  const [error, setError]         = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState('');
+  const [amount, setAmount]           = useState('');
+  const [date, setDate]               = useState('');
   const [responsible, setResponsible] = useState('');
-  const [source, setSource] = useState('');
+  const [source, setSource]           = useState('');
+  const [accountId, setAccountId]     = useState('');
 
-  // Carrega o lançamento ao abrir
+  const [role, setRole]         = useState<'admin' | 'operator' | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [i2AccountId, setI2AccountId] = useState('');
+  const [pfAccountId, setPfAccountId] = useState('');
+
   useEffect(() => {
     async function load() {
       const db = createClient();
       const { data: { user } } = await db.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
+      const { data: profile } = await db
+        .from('profiles').select('household_id, role').eq('id', user.id).single();
+      if (!profile) { router.push('/login'); return; }
+
+      setRole(profile.role as 'admin' | 'operator');
+
+      // Carregar transação
       const { data: tx, error: err } = await db
-        .from('transactions')
-        .select('*')
-        .eq('id', id)
-        .single();
+        .from('transactions').select('*').eq('id', id).single();
 
       if (err || !tx) {
         setError('Lançamento não encontrado.');
@@ -56,10 +80,38 @@ export default function EditarLancamentoPage() {
       setDate(tx.occurred_on);
       setResponsible(tx.responsible);
       setSource(tx.source ?? '');
+      setAccountId(tx.account_id);
+
+      // Carregar contas disponíveis
+      const { data: accs } = await db
+        .from('accounts')
+        .select('id, name, kind, entity_id')
+        .eq('household_id', profile.household_id)
+        .eq('active', true)
+        .order('kind');
+
+      const allAccounts = (accs ?? []) as Account[];
+      const visibleAccounts = profile.role === 'admin'
+        ? allAccounts.filter(a => !a.name.toLowerCase().includes('juliana'))
+        : allAccounts.filter(a => a.kind === 'credit_card');
+
+      setAccounts(visibleAccounts);
+      setI2AccountId(visibleAccounts.find(a => a.kind === 'company')?.id ?? '');
+      setPfAccountId(visibleAccounts.find(a => a.kind === 'credit_card')?.id ?? '');
+
       setStatus('ready');
     }
     load();
   }, [id, router]);
+
+  function handleResponsibleChange(value: string) {
+    setResponsible(value);
+    if (value === 'i2' && i2AccountId) {
+      setAccountId(i2AccountId);
+    } else if (value !== 'i2' && pfAccountId && accountId === i2AccountId) {
+      setAccountId(pfAccountId);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +127,8 @@ export default function EditarLancamentoPage() {
       return;
     }
 
+    const selectedAcc = accounts.find(a => a.id === accountId);
+
     const { error: err } = await db
       .from('transactions')
       .update({
@@ -82,6 +136,8 @@ export default function EditarLancamentoPage() {
         amount: parsedAmount,
         occurred_on: date,
         responsible,
+        account_id: accountId,
+        entity_id: selectedAcc?.entity_id ?? null,
       })
       .eq('id', id);
 
@@ -122,6 +178,8 @@ export default function EditarLancamentoPage() {
     );
   }
 
+  const isAdmin = role === 'admin';
+
   return (
     <div className="min-h-screen px-4 pt-14 pb-28 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% -5%, rgba(59,130,246,0.1) 0%, transparent 60%)' }} />
@@ -145,7 +203,6 @@ export default function EditarLancamentoPage() {
         </div>
       </div>
 
-      {/* Erro */}
       {error && (
         <div className="rounded-2xl p-4 mb-5 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
           <span className="text-lg">⚠️</span>
@@ -154,21 +211,18 @@ export default function EditarLancamentoPage() {
       )}
 
       <form onSubmit={handleSave} className="space-y-5">
+
         {/* Valor */}
         <div>
           <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Valor (R$)</label>
           <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0,00"
-            required
+            type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+            value={amount} onChange={e => setAmount(e.target.value)}
+            placeholder="0,00" required
             className="w-full rounded-2xl px-5 py-4 text-white text-3xl font-bold placeholder-white/20 focus:outline-none transition-all"
             style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={e  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
@@ -176,15 +230,12 @@ export default function EditarLancamentoPage() {
         <div>
           <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Descrição</label>
           <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Ex: Mercado, farmácia..."
-            required
+            type="text" value={description} onChange={e => setDescription(e.target.value)}
+            placeholder="Ex: Mercado, farmácia..." required
             className="w-full rounded-xl px-4 py-3.5 text-white placeholder-white/25 text-base focus:outline-none transition-all"
             style={inputStyle}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={e  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
@@ -192,14 +243,11 @@ export default function EditarLancamentoPage() {
         <div>
           <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Data</label>
           <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
+            type="date" value={date} onChange={e => setDate(e.target.value)} required
             className="w-full rounded-xl px-4 py-3.5 text-white text-base focus:outline-none transition-all"
             style={{ ...inputStyle, colorScheme: 'dark' }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onBlur={e  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
 
@@ -207,13 +255,12 @@ export default function EditarLancamentoPage() {
         <div>
           <label className="block text-white/40 text-xs uppercase tracking-wider mb-3">Responsável</label>
           <div className="grid grid-cols-2 gap-2.5">
-            {RESPONSIBLE_OPTIONS.map((opt) => {
+            {RESPONSIBLE_OPTIONS.map(opt => {
               const isSelected = responsible === opt.value;
               return (
                 <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setResponsible(opt.value)}
+                  key={opt.value} type="button"
+                  onClick={() => handleResponsibleChange(opt.value)}
                   className="flex items-center justify-center py-4 rounded-2xl font-semibold text-sm transition-all duration-200 active:scale-95"
                   style={{
                     background: isSelected ? opt.bg : 'rgba(255,255,255,0.05)',
@@ -228,6 +275,37 @@ export default function EditarLancamentoPage() {
           </div>
         </div>
 
+        {/* Conta — só admin com múltiplas contas */}
+        {isAdmin && accounts.length > 1 && (
+          <div>
+            <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Conta</label>
+            <div className="flex flex-col gap-2">
+              {accounts.map(acc => {
+                const isSelected = accountId === acc.id;
+                const isPJ = acc.kind === 'company';
+                const accent = isPJ ? '#f59e0b' : '#6366f1';
+                return (
+                  <button
+                    key={acc.id} type="button"
+                    onClick={() => setAccountId(acc.id)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all active:scale-95"
+                    style={{
+                      background: isSelected ? (isPJ ? 'rgba(245,158,11,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isSelected ? accent + '50' : 'rgba(255,255,255,0.08)'}`,
+                      color: isSelected ? accent : 'rgba(255,255,255,0.45)',
+                    }}
+                  >
+                    <span className="text-base">{KIND_ICON[acc.kind]}</span>
+                    <span className="flex-1 text-left">{acc.name}</span>
+                    {isPJ && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>PJ</span>}
+                    {isSelected && <span className="text-[10px]" style={{ color: accent }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Salvar */}
         <button
           type="submit"
@@ -239,7 +317,7 @@ export default function EditarLancamentoPage() {
         </button>
       </form>
 
-      {/* Excluir — zona de perigo */}
+      {/* Excluir */}
       <div className="mt-8 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         {!confirmDelete ? (
           <button
@@ -255,7 +333,7 @@ export default function EditarLancamentoPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-medium text-white/60 transition-all"
+                className="flex-1 py-3 rounded-xl text-sm font-medium text-white/60"
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
               >
                 Cancelar

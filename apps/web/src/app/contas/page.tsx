@@ -54,7 +54,7 @@ export default async function ContasPage() {
   const pctI2 = totalFatura > 0 ? (settlement.i2Part / totalFatura) * 100 : 0;
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-28 md:pl-60">
       {/* Header */}
       <div className="relative px-5 pt-14 pb-6 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.14) 0%, transparent 70%)' }} />
@@ -138,7 +138,7 @@ export default async function ContasPage() {
         )}
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
     </div>
   );
 }

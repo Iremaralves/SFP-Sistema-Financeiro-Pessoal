@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { BottomNav } from '@/components/BottomNav';
 import { FaturamentoForm } from './FaturamentoForm';
+import { FiscalNoteForm } from './FiscalNoteForm';
 import Link from 'next/link';
 
 function fmt(n: number) {
@@ -86,7 +87,7 @@ export default async function EmpresaPage({
 
   const obrigacaoMap = new Map((obligations ?? []).map(o => [o.recurring_id, o]));
 
-  // Receitas PJ do mês (faturamento_i2 + pro_labore)
+  // Receitas PJ do mês (faturamento_i2 + pro_labore) + Notas Fiscais vinculadas
   const { data: incomeRows } = await supabase
     .from('income_records')
     .select('id, kind, amount, description')
@@ -95,6 +96,15 @@ export default async function EmpresaPage({
 
   const faturamento = (incomeRows ?? []).find(r => r.kind === 'faturamento_i2') ?? null;
   const proLabore   = (incomeRows ?? []).find(r => r.kind === 'pro_labore')     ?? null;
+
+  // Nota Fiscal vinculada ao faturamento do mês
+  const { data: fiscalNote } = faturamento
+    ? await supabase
+        .from('fiscal_notes')
+        .select('*')
+        .eq('income_record_id', faturamento.id)
+        .maybeSingle()
+    : { data: null };
 
   // ── DRE ──────────────────────────────────────────────
   const receita       = faturamento?.amount ?? 0;
@@ -114,7 +124,7 @@ export default async function EmpresaPage({
   }
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-28 md:pl-60">
       {/* Header */}
       <div
         className="relative px-5 pt-14 pb-5 overflow-hidden"
@@ -188,6 +198,17 @@ export default async function EmpresaPage({
               />
             </Suspense>
           </div>
+
+          {/* Nota Fiscal do faturamento */}
+          {faturamento && (
+            <Suspense fallback={null}>
+              <FiscalNoteForm
+                incomeRecordId={faturamento.id}
+                existingNote={fiscalNote ?? null}
+                referenceMonth={mes}
+              />
+            </Suspense>
+          )}
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }} />
 
@@ -308,7 +329,7 @@ export default async function EmpresaPage({
 
       </div>
 
-      <BottomNav role="admin" />
+      <BottomNav role="admin" name={profile.name ?? ''} />
     </div>
   );
 }

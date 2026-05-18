@@ -79,6 +79,57 @@ export type Database = {
         Update: { amount?: number; description?: string; entity_id?: string | null };
         Relationships: [];
       };
+      fiscal_notes: {
+        Row: {
+          id: string;
+          household_id: string;
+          income_record_id: string;
+          nf_number: string;
+          nf_amount: number;
+          nf_issued_at: string;
+          competencia: string | null;
+          tomador: string | null;
+          aliquota_iss: number | null;
+          iss_amount: number | null;
+          net_amount: number | null;
+          file_url: string | null;
+          file_path: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          income_record_id: string;
+          nf_number: string;
+          nf_amount: number;
+          nf_issued_at: string;
+          competencia?: string | null;
+          tomador?: string | null;
+          aliquota_iss?: number | null;
+          iss_amount?: number | null;
+          net_amount?: number | null;
+          file_url?: string | null;
+          file_path?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          nf_number?: string;
+          nf_amount?: number;
+          nf_issued_at?: string;
+          competencia?: string | null;
+          tomador?: string | null;
+          aliquota_iss?: number | null;
+          iss_amount?: number | null;
+          net_amount?: number | null;
+          file_url?: string | null;
+          file_path?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

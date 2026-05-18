@@ -156,7 +156,7 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month }: 
         </div>
       </div>
 
-      <BottomNav role="admin" />
+      <BottomNav role="admin" name={profile.name} />
     </>
   );
 }

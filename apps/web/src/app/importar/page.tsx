@@ -34,7 +34,7 @@ export default async function ImportarPage() {
   }));
 
   return (
-    <div className="min-h-screen pb-28 relative overflow-hidden">
+    <div className="min-h-screen pb-28 relative overflow-hidden md:pl-60">
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% -5%, rgba(99,102,241,0.12) 0%, transparent 60%)' }} />
 
       {/* Header */}
@@ -81,7 +81,7 @@ export default async function ImportarPage() {
         )}
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
     </div>
   );
 }

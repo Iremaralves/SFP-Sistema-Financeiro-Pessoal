@@ -22,25 +22,26 @@ export default async function DashboardPage() {
   const [dy, dm] = month.split('-').map(Number);
   const nextMonth = new Date(dy, dm, 1).toISOString().slice(0, 10);
 
-  // Fetch transactions for current month
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('household_id', profile.household_id)
-    .gte('occurred_on', `${month}-01`)
-    .lt('occurred_on', nextMonth)
-    .order('occurred_on', { ascending: false });
-
-  const { data: incomeRecords } = await supabase
-    .from('income_records')
-    .select('*')
-    .eq('household_id', profile.household_id)
-    .eq('reference_month', `${month}-01`);
+  // Fetch em paralelo para reduzir latência
+  const [{ data: transactions }, { data: incomeRecords }] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select('*')
+      .eq('household_id', profile.household_id)
+      .gte('occurred_on', `${month}-01`)
+      .lt('occurred_on', nextMonth)
+      .order('occurred_on', { ascending: false }),
+    supabase
+      .from('income_records')
+      .select('*')
+      .eq('household_id', profile.household_id)
+      .eq('reference_month', `${month}-01`),
+  ]);
 
   const mappedTx = toTransactions(transactions ?? []);
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-24 md:pl-60">
       {profile.role === 'admin' ? (
         <DashboardAdmin
           profile={profile}

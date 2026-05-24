@@ -35,7 +35,14 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
   // (parcial → atualização → final). Por isso NÃO escondemos arquivos
   // "já importados" — o dedup real é por fingerprint de linha no import.
   // Reimportar é seguro: só linhas novas entram.
-  const pendingFiles  = driveFiles;
+  //
+  // UX: mostra apenas os 3 mais recentes por padrão; resto sob "ver antigos"
+  // pra não poluir a tela quando o Drive tiver 12+ faturas históricas.
+  const RECENT_LIMIT = 3;
+  const recentFiles = driveFiles.slice(0, RECENT_LIMIT);
+  const olderFiles  = driveFiles.slice(RECENT_LIMIT);
+  const [showOlder, setShowOlder] = useState(false);
+  const pendingFiles  = showOlder ? driveFiles : recentFiles;
   const importedFiles: DriveFile[] = [];
 
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
@@ -265,7 +272,20 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                 );
               })}
 
-              {/* Importados — collapsed */}
+              {/* Botão "Ver mais antigos" — colapsa arquivos > 3 */}
+              {olderFiles.length > 0 && (
+                <button
+                  onClick={() => setShowOlder(v => !v)}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-2 rounded-lg text-[11px] transition-all"
+                  style={{ background: 'transparent', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  {showOlder
+                    ? <span>▾ Ocultar antigos</span>
+                    : <span>▸ Ver {olderFiles.length} arquivo{olderFiles.length > 1 ? 's' : ''} mais antigo{olderFiles.length > 1 ? 's' : ''}</span>}
+                </button>
+              )}
+
+              {/* Importados — collapsed (legado, mantido por compatibilidade) */}
               {importedFiles.length > 0 && (
                 <div className="pt-1">
                   <button

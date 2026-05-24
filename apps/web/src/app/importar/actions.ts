@@ -3,8 +3,75 @@
 import { createServerSupabase } from '@/lib/supabase-server';
 import { parseNubankCsv, fingerprint, categorize, detectDuplicates } from '@i2fin/core';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 const DRIVE_FOLDER_ID = '15tcAPDuR_sIQ0HwRg16GqfCgGJp-DJqD';
+
+// ─── Action: dispara verificação de email no Apps Script ───────────────────
+// Setup necessário (uma vez):
+//   1. No Apps Script: Script Properties → adicionar WEBHOOK_TOKEN = <valor secreto>
+//   2. Implantar → Web App → "Qualquer pessoa" → copiar URL
+//   3. No Vercel env: APPS_SCRIPT_WEBHOOK_URL=<url> e APPS_SCRIPT_WEBHOOK_TOKEN=<token>
+export async function actionVerificarEmail() {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const url   = process.env.APPS_SCRIPT_WEBHOOK_URL;
+  const token = process.env.APPS_SCRIPT_WEBHOOK_TOKEN;
+  if (!url || !token) {
+    return {
+      ok: false as const,
+      error: 'Webhook não configurado. Configure APPS_SCRIPT_WEBHOOK_URL e APPS_SCRIPT_WEBHOOK_TOKEN no Vercel.',
+      configured: false as const,
+    };
+  }
+
+  try {
+    // Timeout de 30s — Apps Script pode ser lento ao escanear email
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
+
+    const res = await fetch(`${url}?token=${encodeURIComponent(token)}&action=both`, {
+      method: 'GET',
+      signal: controller.signal,
+      // Apps Script Web App redireciona — segue redirect
+      redirect: 'follow',
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      return { ok: false as const, error: `HTTP ${res.status}` };
+    }
+
+    // Detecta HTML (login do Google) — Web App não publicado como "Qualquer pessoa"
+    const ctype = res.headers.get('content-type') ?? '';
+    if (!ctype.includes('application/json')) {
+      const sample = (await res.text()).slice(0, 80);
+      if (sample.toLowerCase().includes('<!doctype') || sample.includes('<html')) {
+        return {
+          ok: false as const,
+          error: 'Web App não está público. No Apps Script → Implantar → Gerenciar implantações → editar → "Quem tem acesso: Qualquer pessoa".',
+        };
+      }
+      return { ok: false as const, error: `Resposta inesperada (${ctype || 'sem content-type'})` };
+    }
+
+    const data = await res.json() as { ok: boolean; novosArquivos?: number; error?: string };
+    if (!data.ok) {
+      return { ok: false as const, error: data.error ?? 'Erro desconhecido' };
+    }
+
+    revalidatePath('/importar');
+    return {
+      ok: true as const,
+      novosArquivos: data.novosArquivos ?? 0,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false as const, error: msg };
+  }
+}
 
 // ─── Shared processing logic (mesma que o CLI) ─────────────────────────────
 
@@ -45,8 +112,13 @@ async function processCSV(content: string, filename: string, userId: string, hou
     return { ok: false as const, error: 'Nenhuma conta de crédito encontrada.' };
   }
 
-  // Detectar duplicatas dentro do próprio CSV
-  const dupes = detectDuplicates(rows);
+  // CSV do Nubank usa convenção "saldo da fatura": compras=positivo, pagamento=negativo.
+  // O app usa convenção "saldo da conta": compras=negativo (dívida), pagamento=positivo (entrada).
+  // Por isso, inverter o sinal de TODAS as linhas ao importar para conta credit_card.
+  const normalizedRows = rows.map(r => ({ ...r, amount: -r.amount }));
+
+  // Detectar duplicatas dentro do próprio CSV (usa amount já normalizado)
+  const dupes = detectDuplicates(normalizedRows);
   const skipFingerprints = new Set<string>();
   for (const dupe of dupes) {
     const older = dupe.rowA.date < dupe.rowB.date ? dupe.rowA : dupe.rowB;
@@ -65,7 +137,7 @@ async function processCSV(content: string, filename: string, userId: string, hou
   // Processar cada linha
   let inserted = 0, skipped = 0, autoAssigned = 0, flagged = 0;
 
-  for (const row of rows) {
+  for (const row of normalizedRows) {
     const fp = await fingerprint(row.date, row.title, row.amount, account.id);
     if (skipFingerprints.has(fp)) { skipped++; continue; }
 
@@ -149,7 +221,8 @@ export async function actionImportarDrive(fileId: string, fileName: string) {
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-  if (!profile || profile.role !== 'admin') redirect('/dashboard');
+  if (!profile) redirect('/login');
+  // Operator (Juliana) também importa — ela é quem categoriza
 
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!keyJson) return { ok: false as const, error: 'Google Drive não configurado.' };

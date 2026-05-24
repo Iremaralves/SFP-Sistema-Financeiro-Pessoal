@@ -331,6 +331,82 @@ function configurarGatilhos() {
 }
 
 // ====================================================
+// GATILHO HORÁRIO (a cada 1h) — melhor que diário
+// Rodar 1× pra trocar do diário para o horário.
+// ====================================================
+function configurarGatilhosHorario() {
+  // Remove triggers antigos (diário ou outros)
+  ScriptApp.getProjectTriggers().forEach(t => {
+    const fn = t.getHandlerFunction();
+    if (fn === 'verificarNovoCSV' || fn === 'verificarEmailNubank') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  // E-mail: a cada 1 hora
+  ScriptApp.newTrigger('verificarEmailNubank')
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  // Pasta: a cada 1 hora
+  ScriptApp.newTrigger('verificarNovoCSV')
+    .timeBased()
+    .everyHours(1)
+    .create();
+}
+
+// ====================================================
+// WEB APP — endpoint público (HTTP GET) com token
+// Permite o app i2-finance disparar verificação sob demanda.
+//
+// Setup:
+//   1. Script Properties → adicionar WEBHOOK_TOKEN com um valor aleatório
+//   2. Implantar → Aplicativo da web → executar como "Eu" + acesso "Qualquer pessoa"
+//   3. Copiar URL e adicionar no Vercel: APPS_SCRIPT_WEBHOOK_URL
+//
+// Endpoint:  <URL>?token=<TOKEN>&action=email|drive|both
+// Resposta:  { ok: true, novosArquivos: N }
+// ====================================================
+function doGet(e) {
+  const props = PropertiesService.getScriptProperties();
+  const expected = props.getProperty('WEBHOOK_TOKEN');
+  const token = (e.parameter && e.parameter.token) || '';
+  const action = (e.parameter && e.parameter.action) || 'both';
+
+  if (!expected || token !== expected) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'unauthorized' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  let novosArquivos = 0;
+  try {
+    if (action === 'email' || action === 'both') {
+      const before = contarArquivosPasta_();
+      verificarEmailNubank();
+      novosArquivos += Math.max(0, contarArquivosPasta_() - before);
+    }
+    if (action === 'drive' || action === 'both') {
+      verificarNovoCSV();
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, novosArquivos, timestamp: new Date().toISOString() }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function contarArquivosPasta_() {
+  const folder = DriveApp.getFolderById(CONFIG.folderId);
+  const files = folder.getFilesByType('text/csv');
+  let count = 0;
+  while (files.hasNext()) { files.next(); count++; }
+  return count;
+}
+
+// ====================================================
 // IMPORTAÇÃO DE CSV DA PASTA
 // Chave única por transação: "data|descrição|valor"
 // Assim o mesmo arquivo pode ser sobrescrito com mais

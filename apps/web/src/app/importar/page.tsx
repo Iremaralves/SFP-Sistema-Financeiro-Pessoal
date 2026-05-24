@@ -24,14 +24,28 @@ export default async function ImportarPage() {
     .order('imported_at', { ascending: false })
     .limit(20);
 
-  // Set de nomes já importados (para marcar no Drive)
-  const importedFilenames = new Set((history ?? []).map((h) => h.filename));
+  // Normaliza nome: remove .csv e sufixos de cópia do navegador como " (2)".
+  // CUIDADO: NÃO removemos sufixos tipo "-1" porque o Nubank usa esse formato
+  // pra distinguir faturas diferentes do mesmo ciclo (ex: parcial vs final).
+  function rootName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/\.csv$/i, '')
+      .replace(/\s*\(\d+\)$/, '')  // só remove " (2)", " (3)" etc.
+      .trim();
+  }
 
-  // Enriquece arquivos do Drive com status de importado
-  const driveFilesWithStatus = driveFiles.map((f) => ({
-    ...f,
-    imported: importedFilenames.has(f.name),
-  }));
+  // Set de nomes já importados (root normalizado)
+  const importedRoots = new Set((history ?? []).map((h) => rootName(h.filename)));
+
+  // Enriquece arquivos do Drive com status de importado (por root, não exato)
+  const driveFilesWithStatus = driveFiles
+    .map((f) => ({
+      ...f,
+      imported: importedRoots.has(rootName(f.name)),
+    }))
+    // Esconde extratos NU_* (não são faturas do cartão) — vão para upload manual
+    .filter((f) => !/^NU_\d/i.test(f.name));
 
   return (
     <div className="min-h-screen pb-28 relative overflow-hidden md:pl-60">

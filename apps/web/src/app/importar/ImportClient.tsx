@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useTransition } from 'react';
-import { actionImportarUpload, actionImportarDrive } from './actions';
+import { useRouter } from 'next/navigation';
+import { actionImportarUpload, actionImportarDrive, actionVerificarEmail } from './actions';
 import { CategorizarFlow } from './CategorizarFlow';
 
 type DriveFile = { id: string; name: string; modifiedTime: string; size: string; imported: boolean };
@@ -20,12 +21,46 @@ const glass = {
 } as React.CSSProperties;
 
 export function ImportClient({ driveFiles, driveEnabled }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importingDriveId, setImportingDriveId] = useState<string | null>(null);
+  const [showImported, setShowImported] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Separar arquivos novos dos já importados
+  const pendingFiles  = driveFiles.filter(f => !f.imported);
+  const importedFiles = driveFiles.filter(f => f.imported);
+
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  async function handleRefresh() {
+    setRefreshing(true);
+    setRefreshMsg(null);
+    try {
+      const res = await actionVerificarEmail();
+      if (res.ok) {
+        setRefreshMsg(res.novosArquivos > 0
+          ? `✓ ${res.novosArquivos} CSV novo(s) baixado(s)`
+          : '✓ Nenhum CSV novo no email');
+        router.refresh();
+      } else if ('configured' in res && res.configured === false) {
+        // Webhook não configurado — só refresh local
+        setRefreshMsg('⚠️ Webhook não configurado — só atualizando lista do Drive');
+        router.refresh();
+      } else {
+        setRefreshMsg(`⚠️ ${res.error}`);
+      }
+    } catch (e) {
+      setRefreshMsg(`⚠️ ${e instanceof Error ? e.message : 'Erro'}`);
+    } finally {
+      setRefreshing(false);
+      // Limpa mensagem após 4s
+      setTimeout(() => setRefreshMsg(null), 4000);
+    }
+  }
 
   function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -43,7 +78,15 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
       fd.append('csv', selectedFile);
       const res = await actionImportarUpload(fd);
       setResult(res);
-      if (res.ok) setSelectedFile(null);
+      if (res.ok) {
+        setSelectedFile(null);
+        // Refresh para atualizar lista do Drive (marcar como "já importado")
+        router.refresh();
+        // Se houve lançamentos pra categorizar, redireciona após 1.2s
+        if (res.flagged > 0) {
+          setTimeout(() => router.push('/categorizar'), 1200);
+        }
+      }
     });
   }
 
@@ -53,6 +96,13 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
       const res = await actionImportarDrive(file.id, file.name);
       setResult(res);
       setImportingDriveId(null);
+      if (res.ok) {
+        // Refresh para o file aparecer como "já importado"
+        router.refresh();
+        if (res.flagged > 0) {
+          setTimeout(() => router.push('/categorizar'), 1200);
+        }
+      }
     });
   }
 
@@ -87,6 +137,24 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                 <Stat label="Auto-categorizadas" value={result.autoAssigned} color="#93c5fd" />
                 {result.flagged > 0 && <Stat label="Sem responsável" value={result.flagged} color="#fbbf24" />}
               </div>
+              {/* CTA grande quando há lançamentos pra categorizar */}
+              {result.flagged > 0 && (
+                <button
+                  onClick={() => router.push('/categorizar')}
+                  className="w-full mt-3 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                  style={{
+                    background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                    color: '#1a1a1a',
+                  }}
+                >
+                  📥 Categorizar {result.flagged} lançamento{result.flagged > 1 ? 's' : ''} agora →
+                </button>
+              )}
+              {result.flagged === 0 && result.inserted === 0 && result.skipped > 0 && (
+                <p className="text-white/40 text-xs mt-3">
+                  ℹ️ Este arquivo já havia sido importado antes — todas as {result.skipped} linhas já estavam no banco.
+                </p>
+              )}
             </div>
           ) : (
             <div className="flex items-start gap-2">
@@ -108,17 +176,47 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
           <div className="flex items-center gap-2 mb-3">
             <span className="text-base">📁</span>
             <p className="text-white/70 text-sm font-semibold">Google Drive</p>
-            <span className="text-[10px] text-white/30 ml-auto">pasta automática</span>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="ml-auto flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                background: 'rgba(59,130,246,0.12)',
+                border: '1px solid rgba(59,130,246,0.25)',
+                color: '#93c5fd',
+              }}
+            >
+              <span className={refreshing ? 'animate-spin' : ''}>🔄</span>
+              {refreshing ? 'Verificando email...' : 'Verificar agora'}
+            </button>
           </div>
 
-          {driveFiles.length === 0 ? (
+          {refreshMsg && (
+            <div className="mb-3 px-3 py-2 rounded-lg text-[11px]"
+              style={{
+                background: refreshMsg.startsWith('✓') ? 'rgba(52,211,153,0.08)' : 'rgba(251,191,36,0.08)',
+                border: `1px solid ${refreshMsg.startsWith('✓') ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
+                color: refreshMsg.startsWith('✓') ? '#34d399' : '#fbbf24',
+              }}>
+              {refreshMsg}
+            </div>
+          )}
+
+          {pendingFiles.length === 0 && importedFiles.length === 0 ? (
             <p className="text-white/30 text-sm text-center py-3">Nenhum CSV na pasta ainda</p>
           ) : (
             <div className="space-y-2">
-              {driveFiles.map((f, idx) => {
+              {/* Novos (não importados) — destacados */}
+              {pendingFiles.length === 0 && (
+                <div className="flex items-center gap-2 py-2 px-2 rounded-lg"
+                  style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
+                  <span className="text-sm">✓</span>
+                  <p className="text-emerald-300/80 text-xs">Tudo em dia — nenhum CSV novo</p>
+                </div>
+              )}
+              {pendingFiles.map((f, idx) => {
                 const isNewest = idx === 0;
-                const isPendingImport = !f.imported;
-                // Todos não importados recebem badge NOVO; o mais recente fica destacado em azul
+                const isPendingImport = true;
                 const highlight = isNewest && isPendingImport;
                 return (
                   <div
@@ -148,25 +246,47 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                       </div>
                       <p className="text-white/30 text-[10px]">{fmtDate(f.modifiedTime)} · {fmt(f.size)}</p>
                     </div>
-                    {!f.imported ? (
-                      <button
-                        onClick={() => handleDriveImport(f)}
-                        disabled={isPending}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
-                        style={{
-                          background: highlight ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.15)',
-                          color: '#93c5fd',
-                          border: '1px solid rgba(59,130,246,0.3)',
-                        }}
-                      >
-                        {importingDriveId === f.id ? '⏳' : '↑ Importar'}
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-white/20 flex-shrink-0">✓</span>
-                    )}
+                    <button
+                      onClick={() => handleDriveImport(f)}
+                      disabled={isPending}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
+                      style={{
+                        background: highlight ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.15)',
+                        color: '#93c5fd',
+                        border: '1px solid rgba(59,130,246,0.3)',
+                      }}
+                    >
+                      {importingDriveId === f.id ? '⏳' : '↑ Importar'}
+                    </button>
                   </div>
                 );
               })}
+
+              {/* Importados — collapsed */}
+              {importedFiles.length > 0 && (
+                <div className="pt-1">
+                  <button
+                    onClick={() => setShowImported(v => !v)}
+                    className="w-full flex items-center justify-between py-2 px-2 rounded-lg text-[11px] transition-all"
+                    style={{ background: 'transparent', color: 'rgba(255,255,255,0.4)' }}
+                  >
+                    <span>{showImported ? '▾' : '▸'} {importedFiles.length} já importado{importedFiles.length > 1 ? 's' : ''}</span>
+                    <span className="text-[10px] text-white/25">{showImported ? 'ocultar' : 'mostrar'}</span>
+                  </button>
+                  {showImported && (
+                    <div className="space-y-1 mt-1.5">
+                      {importedFiles.map(f => (
+                        <div key={f.id} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <span className="text-xs opacity-50">✅</span>
+                          <p className="text-white/40 text-[11px] truncate flex-1">{f.name}</p>
+                          <p className="text-white/20 text-[9px] flex-shrink-0">{fmtDate(f.modifiedTime)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

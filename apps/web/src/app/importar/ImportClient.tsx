@@ -31,9 +31,12 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Separar arquivos novos dos já importados
-  const pendingFiles  = driveFiles.filter(f => !f.imported);
-  const importedFiles = driveFiles.filter(f => f.imported);
+  // Nubank reusa o mesmo nome de arquivo durante todo o ciclo da fatura
+  // (parcial → atualização → final). Por isso NÃO escondemos arquivos
+  // "já importados" — o dedup real é por fingerprint de linha no import.
+  // Reimportar é seguro: só linhas novas entram.
+  const pendingFiles  = driveFiles;
+  const importedFiles: DriveFile[] = [];
 
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   async function handleRefresh() {
@@ -227,11 +230,11 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                       border: `1px solid ${highlight ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
                     }}
                   >
-                    <span className="text-sm">{f.imported ? '✅' : '📄'}</span>
+                    <span className="text-sm">{f.imported ? '↻' : '📄'}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-white text-xs font-medium truncate">{f.name}</p>
-                        {isPendingImport && (
+                        {!f.imported && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                             style={{ background: 'rgba(59,130,246,0.25)', color: '#93c5fd' }}>
                             NOVO
@@ -239,8 +242,8 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
                         )}
                         {f.imported && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{ background: 'rgba(52,211,153,0.15)', color: 'rgba(52,211,153,0.7)' }}>
-                            já importado
+                            style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.8)' }}>
+                            atualização
                           </span>
                         )}
                       </div>

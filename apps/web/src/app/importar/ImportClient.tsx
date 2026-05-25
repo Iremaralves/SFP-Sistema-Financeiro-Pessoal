@@ -123,7 +123,10 @@ export function ImportClient({ driveFiles, driveEnabled }: Props) {
 
   function fmtDate(iso: string) {
     if (!iso) return '';
-    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    const d = new Date(iso);
+    const data = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${data} · ${hora}`;
   }
 
   return (

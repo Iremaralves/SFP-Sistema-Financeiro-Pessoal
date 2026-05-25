@@ -143,7 +143,10 @@ async function processCSV(content: string, filename: string, userId: string, hou
 
     const cat = categorize(row.title, rules);
 
-    const { error: upsertError } = await supabase.from('transactions').upsert(
+    // A UNIQUE constraint é (household_id, fingerprint) — composta.
+    // onConflict precisa listar AMBAS as colunas, senão Postgres não encontra
+    // a constraint pra resolver e a inserção falha silenciosamente em TODA linha.
+    const { data: upserted, error: upsertError } = await supabase.from('transactions').upsert(
       {
         household_id: householdId,
         account_id: account.id,
@@ -155,10 +158,14 @@ async function processCSV(content: string, filename: string, userId: string, hou
         source: 'csv_import',
         created_by: userId,
       },
-      { onConflict: 'fingerprint', ignoreDuplicates: true }
-    );
+      { onConflict: 'household_id,fingerprint', ignoreDuplicates: true }
+    ).select('id');
 
     if (upsertError) { skipped++; continue; }
+
+    // Com ignoreDuplicates+select, data.length === 0 significa "conflito ignorado"
+    // (linha já existia). Sem isso, não dá pra distinguir inserção de conflito.
+    if (!upserted || upserted.length === 0) { skipped++; continue; }
 
     inserted++;
     if (cat.autoAssigned) autoAssigned++;

@@ -126,29 +126,67 @@ async function processCSV(content: string, filename: string, userId: string, hou
     skipFingerprints.add(fp);
   }
 
-  // Pre-fetch content-keys das transactions existentes nesse account no range do CSV.
-  // Fingerprint sozinho não basta porque o algoritmo de normalize() pode mudar
-  // ao longo do tempo, deixando rows antigas com fingerprints incompatíveis
-  // — então usamos (date|description|amount) como chave de dedup extra.
+  // Pre-fetch content-keys das transactions existentes com tolerância de ±2 dias.
+  // Motivações:
+  //   1. Fingerprint sozinho não basta — algoritmo mudou ao longo do tempo,
+  //      rows antigas têm hash incompatível.
+  //   2. Nubank reajusta data da compra (parcial → consolidada): mesma compra
+  //      aparece em 19/mai num CSV e em 20/mai no próximo. Dedup precisa
+  //      tolerar pequena variação de data.
+  //
+  // Estratégia: indexa por (descrição|valor) → Map<data, quantidadeDisponível>.
+  // Pra cada CSV row, procura data dentro de ±2 dias com slot disponível.
+  // Preserva duplicatas legítimas (2 cafés iguais no mesmo dia) pela contagem.
+  const TOLERANCE_DAYS = 2;
   const minDate = normalizedRows.reduce((m, r) => r.date < m ? r.date : m, normalizedRows[0]!.date);
   const maxDate = normalizedRows.reduce((m, r) => r.date > m ? r.date : m, normalizedRows[0]!.date);
+  // Expande range em ±2 dias pra capturar matches próximos
+  const expandDate = (iso: string, days: number) => {
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
   const { data: existingRows } = await supabase
     .from('transactions')
     .select('occurred_on, description, amount')
     .eq('account_id', account.id)
-    .gte('occurred_on', minDate)
-    .lte('occurred_on', maxDate);
+    .gte('occurred_on', expandDate(minDate, -TOLERANCE_DAYS))
+    .lte('occurred_on', expandDate(maxDate, TOLERANCE_DAYS));
 
-  // Conta quantas vezes cada chave já existe no banco
-  // (preserva duplicatas legítimas tipo "2 cafés iguais no mesmo dia")
-  const existingByKey = new Map<string, number>();
-  const contentKey = (date: string, desc: string, amt: number) => `${date}|${desc}|${amt.toFixed(2)}`;
+  const dedupKey = (desc: string, amt: number) => `${desc}|${amt.toFixed(2)}`;
+  // (desc|amount) → Map<date, count> — datas disponíveis pra consumir como duplicata
+  const availableByKey = new Map<string, Map<string, number>>();
   for (const r of (existingRows ?? [])) {
-    const k = contentKey(r.occurred_on, r.description, Number(r.amount));
-    existingByKey.set(k, (existingByKey.get(k) ?? 0) + 1);
+    const k = dedupKey(r.description, Number(r.amount));
+    if (!availableByKey.has(k)) availableByKey.set(k, new Map());
+    const dates = availableByKey.get(k)!;
+    dates.set(r.occurred_on, (dates.get(r.occurred_on) ?? 0) + 1);
   }
-  // Espelho do que JÁ inserimos nesse import — pra não criar dup dentro da própria rodada
-  const insertedThisRun = new Map<string, number>();
+
+  // Procura data próxima dentro de ±TOLERANCE_DAYS e consome (decrementa)
+  // Retorna true se encontrou (= é duplicata), false se não há match
+  function consumeNearbyDate(key: string, targetDate: string): boolean {
+    const dates = availableByKey.get(key);
+    if (!dates) return false;
+    const target = new Date(targetDate + 'T00:00:00Z').getTime();
+    // Prioriza data exata, depois mais próxima
+    let bestDate: string | null = null;
+    let bestDiff = Infinity;
+    for (const [date, count] of dates) {
+      if (count <= 0) continue;
+      const diff = Math.abs((new Date(date + 'T00:00:00Z').getTime() - target) / 86_400_000);
+      if (diff <= TOLERANCE_DAYS && diff < bestDiff) {
+        bestDate = date;
+        bestDiff = diff;
+        if (diff === 0) break; // match exato, ótimo
+      }
+    }
+    if (bestDate !== null) {
+      dates.set(bestDate, dates.get(bestDate)! - 1);
+      return true;
+    }
+    return false;
+  }
 
   // Buscar regras de categorização
   const { data: rulesRaw } = await supabase
@@ -165,14 +203,9 @@ async function processCSV(content: string, filename: string, userId: string, hou
     const fp = await fingerprint(row.date, row.title, row.amount, account.id);
     if (skipFingerprints.has(fp)) { skipped++; continue; }
 
-    // Dedup por content-key: se já existe row com mesma (date, desc, amount)
-    // no banco em quantidade ≥ ao que já inserimos neste run, pula.
-    const key = contentKey(row.date, row.title, row.amount);
-    const alreadyInDB = existingByKey.get(key) ?? 0;
-    const alreadyInRun = insertedThisRun.get(key) ?? 0;
-    if (alreadyInRun < alreadyInDB) {
-      // O banco já cobre esta ocorrência dessa transação
-      insertedThisRun.set(key, alreadyInRun + 1);
+    // Dedup tolerante: procura (descrição|valor) com data dentro de ±2 dias.
+    // Cobre o caso Nubank reajustar data (parcial 19/mai → consolidada 20/mai).
+    if (consumeNearbyDate(dedupKey(row.title, row.amount), row.date)) {
       skipped++;
       continue;
     }
@@ -203,10 +236,12 @@ async function processCSV(content: string, filename: string, userId: string, hou
     // (linha já existia). Sem isso, não dá pra distinguir inserção de conflito.
     if (!upserted || upserted.length === 0) { skipped++; continue; }
 
-    // Marca como inserido neste run pra próxima ocorrência da mesma key
-    // ser tratada como duplicata em vez de inserir novamente
-    insertedThisRun.set(contentKey(row.date, row.title, row.amount),
-      (insertedThisRun.get(contentKey(row.date, row.title, row.amount)) ?? 0) + 1);
+    // Registra inserção: adiciona essa data ao mapa pra que a próxima
+    // ocorrência da mesma (desc|amount) seja tratada como duplicata
+    const k = dedupKey(row.title, row.amount);
+    if (!availableByKey.has(k)) availableByKey.set(k, new Map());
+    const dates = availableByKey.get(k)!;
+    dates.set(row.date, (dates.get(row.date) ?? 0) + 1);
     inserted++;
     if (cat.autoAssigned) autoAssigned++;
     else if (cat.responsible === 'unassigned') flagged++;

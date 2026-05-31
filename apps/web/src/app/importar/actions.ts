@@ -126,6 +126,30 @@ async function processCSV(content: string, filename: string, userId: string, hou
     skipFingerprints.add(fp);
   }
 
+  // Pre-fetch content-keys das transactions existentes nesse account no range do CSV.
+  // Fingerprint sozinho não basta porque o algoritmo de normalize() pode mudar
+  // ao longo do tempo, deixando rows antigas com fingerprints incompatíveis
+  // — então usamos (date|description|amount) como chave de dedup extra.
+  const minDate = normalizedRows.reduce((m, r) => r.date < m ? r.date : m, normalizedRows[0]!.date);
+  const maxDate = normalizedRows.reduce((m, r) => r.date > m ? r.date : m, normalizedRows[0]!.date);
+  const { data: existingRows } = await supabase
+    .from('transactions')
+    .select('occurred_on, description, amount')
+    .eq('account_id', account.id)
+    .gte('occurred_on', minDate)
+    .lte('occurred_on', maxDate);
+
+  // Conta quantas vezes cada chave já existe no banco
+  // (preserva duplicatas legítimas tipo "2 cafés iguais no mesmo dia")
+  const existingByKey = new Map<string, number>();
+  const contentKey = (date: string, desc: string, amt: number) => `${date}|${desc}|${amt.toFixed(2)}`;
+  for (const r of (existingRows ?? [])) {
+    const k = contentKey(r.occurred_on, r.description, Number(r.amount));
+    existingByKey.set(k, (existingByKey.get(k) ?? 0) + 1);
+  }
+  // Espelho do que JÁ inserimos nesse import — pra não criar dup dentro da própria rodada
+  const insertedThisRun = new Map<string, number>();
+
   // Buscar regras de categorização
   const { data: rulesRaw } = await supabase
     .from('categorization_rules')
@@ -140,6 +164,18 @@ async function processCSV(content: string, filename: string, userId: string, hou
   for (const row of normalizedRows) {
     const fp = await fingerprint(row.date, row.title, row.amount, account.id);
     if (skipFingerprints.has(fp)) { skipped++; continue; }
+
+    // Dedup por content-key: se já existe row com mesma (date, desc, amount)
+    // no banco em quantidade ≥ ao que já inserimos neste run, pula.
+    const key = contentKey(row.date, row.title, row.amount);
+    const alreadyInDB = existingByKey.get(key) ?? 0;
+    const alreadyInRun = insertedThisRun.get(key) ?? 0;
+    if (alreadyInRun < alreadyInDB) {
+      // O banco já cobre esta ocorrência dessa transação
+      insertedThisRun.set(key, alreadyInRun + 1);
+      skipped++;
+      continue;
+    }
 
     const cat = categorize(row.title, rules);
 
@@ -167,6 +203,10 @@ async function processCSV(content: string, filename: string, userId: string, hou
     // (linha já existia). Sem isso, não dá pra distinguir inserção de conflito.
     if (!upserted || upserted.length === 0) { skipped++; continue; }
 
+    // Marca como inserido neste run pra próxima ocorrência da mesma key
+    // ser tratada como duplicata em vez de inserir novamente
+    insertedThisRun.set(contentKey(row.date, row.title, row.amount),
+      (insertedThisRun.get(contentKey(row.date, row.title, row.amount)) ?? 0) + 1);
     inserted++;
     if (cat.autoAssigned) autoAssigned++;
     else if (cat.responsible === 'unassigned') flagged++;

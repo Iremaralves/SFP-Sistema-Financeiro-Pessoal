@@ -47,7 +47,7 @@ export function parseNubankCsv(content: string): ParseResult {
     const result = NubankCsvRowSchema.safeParse({
       date: date?.trim(),
       title: title?.trim(),
-      amount: amountStr?.trim(),
+      amount: normalizeAmount(amountStr ?? ''),
     });
 
     if (!result.success) {
@@ -58,6 +58,21 @@ export function parseNubankCsv(content: string): ParseResult {
   }
 
   return { rows, sha256, errors };
+}
+
+/**
+ * Normaliza valor monetário aceitando:
+ *  - Formato US: "47.19", "-9913.67"  (padrão Nubank histórico)
+ *  - Formato BR: "47,19", "- 9.913,67" (Nubank começou a usar 06/2026)
+ *  - Espaço entre sinal e número: "- 19,91"
+ */
+function normalizeAmount(raw: string): string {
+  let s = raw.trim().replace(/^-\s+/, '-');  // "- 19,91" → "-19,91"
+  if (s.includes(',')) {
+    // BR: ponto é separador de milhar, vírgula é decimal
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  return s;
 }
 
 function parseCsvLine(line: string): string[] {

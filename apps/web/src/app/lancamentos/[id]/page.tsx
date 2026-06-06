@@ -3,6 +3,19 @@
 import { createClient } from '@/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { TxAttachments } from '@/components/TxAttachments';
+
+interface Attachment {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_url: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  kind: string | null;
+  notes: string | null;
+  created_at: string;
+}
 
 type AccountKind = 'credit_card' | 'checking' | 'company';
 
@@ -52,6 +65,8 @@ export default function EditarLancamentoPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [i2AccountId, setI2AccountId] = useState('');
   const [pfAccountId, setPfAccountId] = useState('');
+  const [householdId, setHouseholdId] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -64,6 +79,14 @@ export default function EditarLancamentoPage() {
       if (!profile) { router.push('/login'); return; }
 
       setRole(profile.role as 'admin' | 'operator');
+      setHouseholdId(profile.household_id);
+
+      // Carregar anexos da transação (em paralelo com tx abaixo)
+      db.from('transaction_attachments')
+        .select('*')
+        .eq('transaction_id', id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => setAttachments((data ?? []) as Attachment[]));
 
       // Carregar transação
       const { data: tx, error: err } = await db
@@ -131,11 +154,19 @@ export default function EditarLancamentoPage() {
 
     const selectedAcc = accounts.find(a => a.id === accountId);
 
+    // Cartão de crédito: compras são SEMPRE despesa (amount negativo).
+    // Sem essa inversão, editar uma compra do cartão (input mostra positivo)
+    // grava com sinal positivo no banco → sai do total da fatura
+    // (calculateInvoiceSettlement só conta amount < 0).
+    const finalAmount = selectedAcc?.kind === 'credit_card'
+      ? -Math.abs(parsedAmount)
+      : parsedAmount;
+
     const { error: err } = await db
       .from('transactions')
       .update({
         description,
-        amount: parsedAmount,
+        amount: finalAmount,
         occurred_on: date,
         responsible,
         account_id: accountId,
@@ -183,8 +214,9 @@ export default function EditarLancamentoPage() {
   const isAdmin = role === 'admin';
 
   return (
-    <div className="min-h-screen px-4 pt-14 pb-28 relative overflow-hidden">
+    <div className="min-h-screen pb-28 md:pl-60 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% -5%, rgba(59,130,246,0.1) 0%, transparent 60%)' }} />
+      <div className="px-4 md:px-8 pt-14 md:pt-8 page-container">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
@@ -308,6 +340,17 @@ export default function EditarLancamentoPage() {
           </div>
         )}
 
+        {/* Anexos */}
+        {householdId && (
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <TxAttachments
+              transactionId={id}
+              householdId={householdId}
+              initial={attachments}
+            />
+          </div>
+        )}
+
         {/* Salvar */}
         <button
           type="submit"
@@ -351,6 +394,7 @@ export default function EditarLancamentoPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

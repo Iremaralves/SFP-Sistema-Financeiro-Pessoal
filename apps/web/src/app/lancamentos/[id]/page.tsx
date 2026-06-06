@@ -67,6 +67,15 @@ export default function EditarLancamentoPage() {
   const [pfAccountId, setPfAccountId] = useState('');
   const [householdId, setHouseholdId] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Admin (Iremar) pode forçar desbloqueio de campos definidos pelo Nubank
+  const [forceUnlock, setForceUnlock] = useState(false);
+
+  // Lock dos campos valor/data/conta quando é compra do cartão importada do CSV
+  // (definidos pelo Nubank — editar quebra a conciliação com a fatura real).
+  // Editáveis sempre: descrição, responsável, notas, parcelamento.
+  const selectedAcc = accounts.find(a => a.id === accountId);
+  const isCardPurchase = selectedAcc?.kind === 'credit_card' && source === 'csv_import';
+  const fieldsLocked = isCardPurchase && !forceUnlock;
 
   useEffect(() => {
     async function load() {
@@ -152,12 +161,8 @@ export default function EditarLancamentoPage() {
       return;
     }
 
-    const selectedAcc = accounts.find(a => a.id === accountId);
-
+    // selectedAcc já vem do scope do componente.
     // Cartão de crédito: compras são SEMPRE despesa (amount negativo).
-    // Sem essa inversão, editar uma compra do cartão (input mostra positivo)
-    // grava com sinal positivo no banco → sai do total da fatura
-    // (calculateInvoiceSettlement só conta amount < 0).
     const finalAmount = selectedAcc?.kind === 'credit_card'
       ? -Math.abs(parsedAmount)
       : parsedAmount;
@@ -246,16 +251,54 @@ export default function EditarLancamentoPage() {
 
       <form onSubmit={handleSave} className="space-y-5">
 
+        {/* Banner — compra do cartão tem campos travados */}
+        {isCardPurchase && (
+          <div
+            className="rounded-2xl p-3.5 flex items-start gap-3"
+            style={{
+              background: fieldsLocked ? 'rgba(99,102,241,0.08)' : 'rgba(245,158,11,0.08)',
+              border: `1px solid ${fieldsLocked ? 'rgba(99,102,241,0.2)' : 'rgba(245,158,11,0.25)'}`,
+            }}
+          >
+            <span className="text-base">{fieldsLocked ? '🔒' : '⚠️'}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs leading-relaxed" style={{ color: fieldsLocked ? 'rgba(165,180,252,0.95)' : 'rgba(252,211,77,0.95)' }}>
+                {fieldsLocked
+                  ? <>Compra do cartão Nubank. <strong>Valor, data e conta</strong> são definidos pelo banco — edite apenas <strong>descrição, responsável e notas</strong>.</>
+                  : <>⚠️ Modo edição livre ativo — qualquer mudança em valor/data/conta vai descasar da fatura real do Nubank. Use só pra corrigir erros confirmados.</>}
+              </p>
+              {role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => setForceUnlock(v => !v)}
+                  className="text-[10px] mt-1.5 underline opacity-70 hover:opacity-100"
+                  style={{ color: fieldsLocked ? '#a5b4fc' : '#fbbf24' }}
+                >
+                  {fieldsLocked ? 'Editar mesmo assim →' : '← Voltar a travar'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Valor */}
         <div>
-          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Valor (R$)</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            Valor (R$) {fieldsLocked && <span className="opacity-50">🔒</span>}
+          </label>
           <input
             type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
             value={amount} onChange={e => setAmount(e.target.value)}
             placeholder="0,00" required
+            readOnly={fieldsLocked}
             className="w-full rounded-2xl px-5 py-4 text-white text-3xl font-bold placeholder-white/20 focus:outline-none transition-all"
-            style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
-            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            style={{
+              ...inputStyle,
+              fontVariantNumeric: 'tabular-nums',
+              opacity: fieldsLocked ? 0.55 : 1,
+              cursor: fieldsLocked ? 'not-allowed' : 'text',
+            }}
+            onFocus={e => { if (!fieldsLocked) e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)'; }}
             onBlur={e  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
@@ -275,12 +318,20 @@ export default function EditarLancamentoPage() {
 
         {/* Data */}
         <div>
-          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Data</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            Data {fieldsLocked && <span className="opacity-50">🔒</span>}
+          </label>
           <input
             type="date" value={date} onChange={e => setDate(e.target.value)} required
+            readOnly={fieldsLocked}
             className="w-full rounded-xl px-4 py-3.5 text-white text-base focus:outline-none transition-all"
-            style={{ ...inputStyle, colorScheme: 'dark' }}
-            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            style={{
+              ...inputStyle,
+              colorScheme: 'dark',
+              opacity: fieldsLocked ? 0.55 : 1,
+              cursor: fieldsLocked ? 'not-allowed' : 'text',
+            }}
+            onFocus={e => { if (!fieldsLocked) e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)'; }}
             onBlur={e  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
           />
         </div>
@@ -312,8 +363,10 @@ export default function EditarLancamentoPage() {
         {/* Conta — só admin com múltiplas contas */}
         {isAdmin && accounts.length > 1 && (
           <div>
-            <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Conta</label>
-            <div className="flex flex-col gap-2">
+            <label className="block text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+              Conta {fieldsLocked && <span className="opacity-50">🔒</span>}
+            </label>
+            <div className="flex flex-col gap-2" style={{ opacity: fieldsLocked ? 0.55 : 1, pointerEvents: fieldsLocked ? 'none' : 'auto' }}>
               {accounts.map(acc => {
                 const isSelected = accountId === acc.id;
                 const isPJ = acc.kind === 'company';
@@ -321,12 +374,14 @@ export default function EditarLancamentoPage() {
                 return (
                   <button
                     key={acc.id} type="button"
-                    onClick={() => setAccountId(acc.id)}
+                    onClick={() => !fieldsLocked && setAccountId(acc.id)}
+                    disabled={fieldsLocked}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all active:scale-95"
                     style={{
                       background: isSelected ? (isPJ ? 'rgba(245,158,11,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.04)',
                       border: `1px solid ${isSelected ? accent + '50' : 'rgba(255,255,255,0.08)'}`,
                       color: isSelected ? accent : 'rgba(255,255,255,0.45)',
+                      cursor: fieldsLocked ? 'not-allowed' : 'pointer',
                     }}
                   >
                     <span className="text-base">{KIND_ICON[acc.kind]}</span>

@@ -9,6 +9,7 @@ import { BillsCard, type Bill } from './BillsCard';
 import Link from 'next/link';
 import type { ProfileScope } from '@/lib/profile-scope';
 import { QuickActions } from './QuickActions';
+import { ProfileScopeToggle } from './ProfileScopeToggle';
 
 interface DashboardMetrics {
   faturaTotal: number;
@@ -56,9 +57,11 @@ export function DashboardOperator({ profile, transactions, month, bills = [], sc
       {/* Header */}
       <div className="relative px-5 md:px-8 pt-14 md:pt-8 pb-6 overflow-hidden page-container">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(236,72,153,0.18) 0%, transparent 70%)' }} />
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
           <span className="text-white/40 text-xs uppercase tracking-widest capitalize">Fatura {monthLabel}</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Badge de perfil — Juliana só vê pessoal, sem opção de trocar */}
+            <ProfileScopeToggle current={scope} locked variant="compact" />
             <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(236,72,153,0.15)', color: '#f9a8d4', border: '1px solid rgba(236,72,153,0.25)' }}>
               operator
             </span>
@@ -95,6 +98,9 @@ export function DashboardOperator({ profile, transactions, month, bills = [], sc
             <span className="text-amber-300 text-base flex-shrink-0">›</span>
           </Link>
         )}
+
+        {/* ── A Pagar (gestão prioritária pra Juliana) ──────────────────── */}
+        <BillsCard bills={bills} accent="var(--accent-juliana)" />
 
         {/* Hero — total fatura + barra */}
         <div className="rounded-3xl p-5 md:p-7 relative overflow-hidden" style={glass}>
@@ -154,8 +160,7 @@ export function DashboardOperator({ profile, transactions, month, bills = [], sc
           </div>
         </div>
 
-        {/* Contas a pagar do mês (Juliana paga 3: plano saúde, apartamento, feira) */}
-        <BillsCard bills={bills} accent="var(--accent-juliana)" />
+        {/* (BillsCard movido pro topo) */}
 
         {/* Add transaction CTA */}
         <Link

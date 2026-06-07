@@ -9,7 +9,9 @@ import { LogoutButton } from './LogoutButton';
 import { DonutSplit } from './charts/DonutSplit';
 import { Sparkline } from './charts/Sparkline';
 import { BillsCard, type Bill } from './BillsCard';
+import { IncomeCard, type IncomeLine } from './IncomeCard';
 import { QuickActions } from './QuickActions';
+import { ProfileScopeToggle } from './ProfileScopeToggle';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -81,11 +83,13 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
       {/* Header */}
       <div className="relative px-5 md:px-8 pt-14 md:pt-8 pb-6 overflow-hidden page-container">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.18) 0%, transparent 70%)' }} />
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
           <span className="text-white/40 text-xs uppercase tracking-widest capitalize">
             Fatura {monthLabel}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Toggle de perfil — atalho rápido no header */}
+            <ProfileScopeToggle current={scope} variant="compact" />
             <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.25)' }}>
               admin
             </span>
@@ -127,6 +131,20 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
             <span className="text-amber-300 text-base flex-shrink-0">›</span>
           </Link>
         )}
+
+        {/* ── A Pagar + A Receber lado a lado (gestão prioritária) ───────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <BillsCard bills={bills} accent="var(--accent-iremar)" />
+          <IncomeCard
+            total={proLabore + julianaTransf + otherIncome}
+            lines={[
+              ...(proLabore > 0    ? [{ label: 'Pró-labore i2',         amount: proLabore,    kind: 'pro_labore'       }] : []),
+              ...(julianaTransf > 0 ? [{ label: 'Transferência Juliana', amount: julianaTransf, kind: 'juliana_transfer' }] : []),
+              ...(otherIncome > 0  ? [{ label: 'Outras receitas',        amount: otherIncome,  kind: 'default'          }] : []),
+            ] as IncomeLine[]}
+            hrefMore="/empresa"
+          />
+        </div>
 
         {/* Hero — total fatura + split donut (desktop) */}
         <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-3">
@@ -272,8 +290,7 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
           )}
         </div>
 
-        {/* Contas a pagar do mês — atrasados, hoje, a vencer */}
-        <BillsCard bills={bills} accent="var(--accent-iremar)" />
+        {/* (BillsCard movido pro topo, ao lado de IncomeCard) */}
 
         {/* Lançamentos recentes */}
         <div>

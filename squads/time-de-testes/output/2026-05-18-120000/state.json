@@ -1,0 +1,19 @@
+{
+  "squad": "time-de-testes",
+  "status": "completed",
+  "step": { "current": 4, "total": 4, "label": "relatorio_final" },
+  "agents": [
+    { "id": "ana_qa", "name": "Ana", "icon": "🔍", "status": "done", "desk": { "col": 1, "row": 1 } },
+    { "id": "diego_dba", "name": "Diego", "icon": "🗄️", "status": "done", "desk": { "col": 2, "row": 1 } },
+    { "id": "carol_tester", "name": "Carol", "icon": "🧪", "status": "done", "desk": { "col": 3, "row": 1 } }
+  ],
+  "handoff": {
+    "from": "carol_tester",
+    "to": "ana_qa",
+    "message": "47 casos de teste consolidados. Veredicto: BLOQUEADO — 5 P0s antes do deploy.",
+    "completedAt": "2026-05-18T12:35:00.000Z"
+  },
+  "startedAt": "2026-05-18T12:00:00.000Z",
+  "completedAt": "2026-05-18T12:35:00.000Z",
+  "updatedAt": "2026-05-18T12:35:00.000Z"
+}

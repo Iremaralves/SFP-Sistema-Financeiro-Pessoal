@@ -1,0 +1,114 @@
+name: i2-e2e-tester
+description: >
+  Squad de QA end-to-end. NÃO LÊ CÓDIGO. SIMULA O USUÁRIO. Descreve cada
+  fluxo passo-a-passo: clique → action → resultado → próximo clique. Detecta
+  bugs de UX que o code-reading deixa passar: stale state, falta de refresh,
+  CTAs ausentes, layout estourando, role guards silenciosos.
+
+  Diferente do time-de-testes (que faz análise estática), este squad opera
+  como se fosse o usuário real abrindo o app em cada role.
+
+version: "1.0"
+language: pt-BR
+
+natureza: e2e_funcional
+
+filosofia: |
+  Toda regra de UX se traduz em "depois desse clique, o que mudei na tela?".
+  Se a resposta é "nada", existe bug — mesmo que o código pareça correto.
+  O code-reading do time-de-testes anterior deixou passar 5 bugs óbvios:
+  - router.refresh ausente após import (botão não muda de estado)
+  - sidebar null pra operator (gap visual no desktop)
+  - role guards em server actions (clique sem feedback)
+  - CTA ausente após importar (usuário fica perdido)
+  - layout EquacaoCard estourando (truncate ausente)
+  Esses bugs SÓ aparecem quando você simula clique → resultado.
+
+protocolo_de_teste: |
+  Para cada fluxo, descrever em FORMATO CENÁRIO:
+  ┌────────────────────────────────────────────────┐
+  │ ROLE: admin | operator                         │
+  │ TELA INICIAL: /dashboard                       │
+  │ AÇÃO 1: clique em "Importar" (BottomNav)      │
+  │  → ESPERADO: navega para /importar             │
+  │  → REAL: ?                                     │
+  │ AÇÃO 2: clique em "Verificar agora"           │
+  │  → ESPERADO: spinner → lista atualiza         │
+  │  → REAL: ?                                     │
+  └────────────────────────────────────────────────┘
+  Para cada AÇÃO: declarar ESPERADO antes de verificar REAL.
+  Se REAL difere de ESPERADO: bug encontrado.
+
+pipeline:
+  - id: cenarios_admin
+    name: "Fluxos completos do Admin (Iremar)"
+    agent: rafa_e2e
+    description: >
+      Simula 10 cenários de uso real do Iremar:
+      1. Login → Dashboard → ver próximos vencimentos → clicar em um → editar
+      2. Dashboard → /compromissos → filtrar "Atrasados" → dar baixa
+      3. Dashboard → /contas → ver saldos com ícones bancos → /transferencias
+      4. /empresa → ver DRE → ir em /empresa/notas → editar NF existente
+      5. /relatorios → trocar entre 3 abas → ver fluxo de caixa
+      6. /acerto → confirmar fechamento Iremar × Juliana
+      7. /mes → ver receitas → tentar editar (deve funcionar)
+      8. /lancamentos/[id] → anexar PDF → salvar → reabrir → ver anexo
+      9. /backups → ver lista (deve aparecer)
+      10. Sair → tentar acessar /dashboard direto → deve redirecionar /login
+
+      Para cada AÇÃO: declarar ESPERADO + verificar via SQL/code-read se
+      a UI realmente refletiria isso. Foco em router.refresh, CTA visível,
+      layout truncate.
+    outputs:
+      - output/01-cenarios-admin.md
+
+  - id: cenarios_operator
+    name: "Fluxos completos do Operator (Juliana)"
+    agent: rafa_e2e
+    description: >
+      Simula 10 cenários de uso real da Juliana:
+      1. Login → Dashboard → ver alerta de categorização (se houver)
+      2. Dashboard → /importar → clicar Verificar agora
+      3. /importar → clicar Importar em CSV novo → ver botão mudar pra "já importado"
+      4. Após importar com pendentes → redirecionar /categorizar AUTO
+      5. /categorizar → categorizar 1 tx como Iremar → router.refresh → some da lista
+      6. Dashboard → /compromissos → ver 3 contas dela (Plano saúde, Apt, Feira)
+      7. /compromissos → dar baixa em uma das contas dela
+      8. /acerto → ver fechamento (acesso permitido)
+      9. /mes → ver fechamento → tentar editar (deve falhar sem erro silencioso)
+      10. Tentar /empresa → deve redirecionar pra /dashboard
+
+      Foco em: layout não estoura no mobile, sidebar visível no desktop,
+      CTAs claros, sem dead-ends.
+    outputs:
+      - output/02-cenarios-operator.md
+
+  - id: catalogo_bugs
+    name: "Catálogo de bugs encontrados"
+    agent: rafa_e2e
+    description: >
+      Para cada bug encontrado nos 20 cenários acima:
+      - ID
+      - Severidade (P0/P1/P2)
+      - Cenário onde aparece (qual passo)
+      - Arquivo + linhas
+      - Fix sugerido em 1-2 linhas
+      - Como o time-de-testes deixou passar (o que faltou auditar)
+    inputs:
+      - output/01-cenarios-admin.md
+      - output/02-cenarios-operator.md
+    outputs:
+      - output/03-catalogo-bugs.md
+
+  - id: regras_qa_v2
+    name: "Regras para QA v2 (do que aprendemos)"
+    agent: rafa_e2e
+    description: >
+      Atualiza memória do squad time-de-testes com regras concretas:
+      - Toda mutation precisa de router.refresh — testar
+      - Toda role guard precisa retorno (não redirect silencioso)
+      - Todo CTA "ação concluída" precisa direcionar próximo passo
+      - Todo layout com 3+ colunas precisa min-w-0 + truncate
+      - Toda página com md:pl-60 precisa Sidebar para AMBOS roles
+    outputs:
+      - output/04-regras-qa-v2.md

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
+import { BarChart } from '@/components/charts/BarChart';
 import Link from 'next/link';
 
 function fmt(n: number) {
@@ -37,7 +39,7 @@ export default async function RelatoriosPage({
 
   const { data: profile } = await supabase
     .from('profiles').select('*').eq('id', user.id).single();
-  if (!profile || profile.role !== 'admin') redirect('/dashboard');
+  if (!profile) redirect('/login');
 
   const params = await searchParams;
   const tab = (params.tab as Tab) ?? 'fluxo';
@@ -143,8 +145,11 @@ export default async function RelatoriosPage({
     { key: 'receber', label: 'Contas a Receber',   icon: '💰' },
   ];
 
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
+
   return (
-    <div className="min-h-screen pb-28 md:pl-60">
+    <div className="min-h-screen pb-28 md:pb-12 md:pl-60">
       {/* Header */}
       <div
         className="relative px-5 pt-14 pb-5 overflow-hidden"
@@ -176,11 +181,38 @@ export default async function RelatoriosPage({
         </div>
       </div>
 
-      <div className="px-4 pt-3 space-y-3">
+      <div className="px-4 md:px-8 pt-3 space-y-3 page-container">
 
         {/* ── TAB: FLUXO DE CAIXA ─────────────────────────── */}
         {tab === 'fluxo' && (
           <>
+            {/* Gráfico de barras — receitas vs despesas (12 meses) */}
+            <div
+              className="rounded-2xl p-4 md:p-5"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <p className="text-white/40 text-[10px] uppercase tracking-widest mb-3">
+                Receitas vs Despesas — últimos 12 meses
+              </p>
+              <BarChart
+                height={220}
+                format={(n) => fmt(n)}
+                labels={[...fluxoComAcumulado].reverse().map((r) => mesLabel(r.mes))}
+                series={[
+                  {
+                    label: 'Receitas',
+                    color: 'var(--accent-invest)',
+                    values: [...fluxoComAcumulado].reverse().map((r) => r.receitas),
+                  },
+                  {
+                    label: 'Despesas',
+                    color: '#f87171',
+                    values: [...fluxoComAcumulado].reverse().map((r) => r.despesas),
+                  },
+                ]}
+              />
+            </div>
+
             {/* Totalizador 12 meses */}
             <div
               className="rounded-2xl p-4 grid grid-cols-3 gap-3 text-center"
@@ -438,7 +470,7 @@ export default async function RelatoriosPage({
 
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} scope={scope} />
     </div>
   );
 }

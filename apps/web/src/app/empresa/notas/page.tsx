@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
 import { FiscalNoteForm } from '../FiscalNoteForm';
 import Link from 'next/link';
@@ -42,6 +43,9 @@ export default async function NotasFiscaisPage() {
     : { data: [] };
 
   const nfMap = new Map((fiscalNotes ?? []).map(n => [n.income_record_id, n]));
+
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
 
   return (
     <div className="min-h-screen pb-28 md:pl-60">

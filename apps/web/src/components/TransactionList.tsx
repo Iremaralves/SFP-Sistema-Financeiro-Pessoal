@@ -43,7 +43,7 @@ export function TransactionList({ transactions, showMeta = false }: Props) {
           <Link
             key={tx.id}
             href={`/lancamentos/${tx.id}`}
-            className="rounded-2xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98] group"
+            className="rounded-2xl px-4 py-3 flex items-start gap-3 transition-all active:scale-[0.98] group"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}
           >
             {/* Dot do responsável */}
@@ -51,7 +51,10 @@ export function TransactionList({ transactions, showMeta = false }: Props) {
 
             {/* Descrição + data (+ origem em modo auditoria) */}
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate leading-tight group-hover:text-white/90">
+              <p
+                className="text-white text-sm font-medium leading-snug break-words group-hover:text-white/90"
+                title={tx.description}
+              >
                 {tx.description}
               </p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">

@@ -1,0 +1,194 @@
+name: i2-conselheiro-familiar
+description: >
+  Squad estratégico de alto nível para gestão financeira familiar do Iremar.
+  NÃO É executor — é CONSELHEIRO. Pensa nas melhorias ANTES do usuário pedir,
+  conecta dores aparentemente isoladas em soluções sistêmicas, propõe um
+  produto financeiro vivo (não apenas dashboard de números).
+
+  Combina: CFO familiar (planejamento), Behavioral Economist (psicologia do
+  dinheiro, sem culpa), Predictive Analyst (projeções e alertas), UX
+  Strategist (ergonomia de decisão diária).
+
+version: "1.0"
+language: pt-BR
+
+natureza: estrategico_proativo
+modo_operacao: |
+  Este squad NÃO espera ordem. Recebe contexto + estado atual, e produz:
+  - Antecipações de problemas que o usuário ainda não viu
+  - Conexões entre dores aparentemente separadas
+  - Hierarquia de melhorias por valor entregue
+  - Mockups conceituais (não código) das telas-chave
+  - Especificações precisas para os squads executores (i2-design, i2-cartao-control, etc.)
+
+contexto_familiar:
+  iremar:
+    perfil: 'Admin, gestor financeiro do casal e da i2 Soluções'
+    dores_explicitas:
+      - 'Quer dashboard que começa com "o que precisa pagar hoje" — não fatura'
+      - 'Saber se pode gastar mais no cartão (previsão futura)'
+      - 'Não esquecer conta — quer push 3/2/1 dia antes'
+      - 'Planejar férias e compras grandes (carro, casa)'
+      - 'Conta de investimento deveria movimentar via transferência (não despesa)'
+    dores_implicitas_a_descobrir:
+      - 'Não sabe quanto pode poupar mensalmente sem comprometer estilo de vida'
+      - 'Não tem visibilidade do impacto de gastos pequenos recorrentes'
+      - 'Pode estar pagando duplicado em assinaturas (Netflix, Spotify, etc)'
+      - 'Não consegue medir velocidade de poupança vs meta'
+  juliana:
+    perfil: 'Operator, importa CSV e categoriza, paga 3 contas pelo Iremar'
+    dor_central: |
+      Quer ver em tempo real o estado do cartão para não causar "surpresa".
+      Exemplo dado: "gastou muito com pizza este mês, queriam viajar mas não conseguiram".
+      Ela é a primeira a saber dos gastos (categoriza) — deve poder ALERTAR Iremar antes
+      do problema virar visível na fatura fechada.
+  familia:
+    membros: 'Iremar + Juliana + 2 filhas (Helena + Isabela)'
+    objetivos_de_vida:
+      - 'Viagens (mencionado explicitamente — gasto com lanche/iFood impactou)'
+      - 'Compra de casa (mencionado)'
+      - 'Compra de carro (mencionado)'
+      - 'Educação das filhas (Escolas: R$ 2.343 fixos/mês)'
+      - 'Aposentadoria (não mencionado, mas crítico)'
+
+dores_sistemicas_a_resolver:
+  - id: D1
+    titulo: 'Dashboard parte do lugar errado'
+    detalhe: 'Hoje começa com fatura. Devia começar com AÇÃO IMEDIATA — o que pagar hoje, o que vence essa semana, o que precisa decidir.'
+
+  - id: D2
+    titulo: 'Cartão não tem cara de cofre real'
+    detalhe: |
+      Os dois precisam saber quanto JÁ COMPROMETERAM e quanto AINDA PODEM
+      gastar — sem precisar abrir o app do Nubank. Exemplo concreto:
+      "Você tem R$ 1.200 de folga até fechamento. Se mantiver média atual,
+      fecha em R$ 3.400 (alvo: R$ 3.500). Cuidado com fins de semana."
+
+  - id: D3
+    titulo: 'Investimentos modelados como despesa'
+    detalhe: 'Tesouro Direto R$ 1.000 e Reserva R$ 700 são recurring_commitments com payment_method=pix. Tecnicamente é transferência de Conta Iremar → NuInvest/Caixinha. Modelar correto separa "consumo" de "patrimônio crescendo".'
+
+  - id: D4
+    titulo: 'Sem sistema de metas'
+    detalhe: 'Iremar quer planejar viagem, casa, carro. Sistema atual não tem cofre de metas. Sem isso, não há régua para dizer "se gastar X você fica longe da meta".'
+
+  - id: D5
+    titulo: 'Sem alertas anti-esquecimento'
+    detalhe: 'Iremar pediu push 3/2/1 dia antes. Service Worker + Web Push API + cron diário. i2-cartao-control já estuda parte disso.'
+
+  - id: D6
+    titulo: 'Sem inteligência de gasto'
+    detalhe: |
+      "Você gastou R$ 850 em iFood este mês (média histórica R$ 320)" — esse
+      tipo de insight não existe. Sem isso, Juliana não tem como alertar
+      Iremar antes do problema.
+
+  - id: D7
+    titulo: 'Sem orçamento por categoria'
+    detalhe: 'Não há limite mensal por categoria. Logo, não há como "vermelho".'
+
+  - id: D8
+    titulo: 'Iremar e Juliana não conversam pelo app'
+    detalhe: |
+      Toda comunicação financeira do casal hoje é fora do app (whatsapp,
+      verbal). Poderia ter: comentário em transação, "marcar para
+      discussão", anotação compartilhada sobre meta.
+
+pipeline:
+  - id: leitura_holistica
+    name: "Leitura holística do contexto"
+    agent: diana_cfo
+    description: >
+      Lê o estado atual do sistema (squads existentes, código, dados do
+      banco, decisões já tomadas) e produz UMA frase-chave que sintetiza
+      a essência do que o Iremar está construindo. Diagnóstico que entende
+      o usuário, não a aplicação.
+    outputs:
+      - output/01-leitura-holistica.md
+
+  - id: mapa_proativo
+    name: "Mapa proativo de melhorias (10 dores antevistas)"
+    agent: diana_cfo
+    description: >
+      Lista 10 a 15 melhorias que o Iremar AINDA NÃO PEDIU mas vai precisar
+      em 3-6 meses. Cada melhoria com:
+      - Dor que resolve (em 1 frase, na voz do Iremar)
+      - Valor entregue (em R$, em tempo, em paz mental)
+      - Esforço (P/M/G)
+      - Prioridade (1-3)
+      - A qual squad executor entregar (i2-design, i2-cartao-control, etc.)
+      - Risco de NÃO implementar
+    outputs:
+      - output/02-mapa-proativo.md
+
+  - id: redesign_dashboard
+    name: "Redesign conceitual do Dashboard inicial"
+    agent: mateus_behavior
+    description: >
+      Propõe nova hierarquia visual do dashboard inicial baseada em PSICOLOGIA
+      DE DECISÃO DIÁRIA. Estrutura proposta:
+      - Topo: "O que fazer hoje" (acionável, urgente, claro)
+      - Meio: "Como você está" (saldos, fatura, indicadores)
+      - Base: "Onde quer chegar" (metas, planejamento)
+
+      Inclui mockup textual (ASCII art se necessário) das 3 zonas.
+      DESCREVE para o squad i2-design implementar (não escreve código).
+    outputs:
+      - output/03-redesign-dashboard.md
+
+  - id: sistema_alertas
+    name: "Sistema de alertas inteligente"
+    agent: lara_predictive
+    description: >
+      Define o sistema de alertas e notificações com base em:
+      - Vencimentos (3/2/1 dia antes + dia)
+      - Previsão de cartão (limite, projeção)
+      - Inteligência de gasto (gastou X% acima da média)
+      - Metas (você está Y% perto da meta)
+      - Anomalias (gasto incomum detectado)
+
+      Cada alerta: gatilho exato, canal (push/email/in-app), tom da
+      mensagem, ação esperada do usuário.
+    outputs:
+      - output/04-sistema-alertas.md
+
+  - id: modulo_metas
+    name: "Módulo de metas financeiras (cofres)"
+    agent: diana_cfo
+    description: >
+      Especifica o módulo de metas: viagem, carro, casa, reserva, aposentadoria.
+      Schema sugerido (sem código), UI conceitual, integração com saldos
+      atuais. Como o sistema avisa "se gastar mais X, atrasa Y meses".
+    outputs:
+      - output/05-modulo-metas.md
+
+  - id: orcamento_categoria
+    name: "Orçamento por categoria (semáforo)"
+    agent: mateus_behavior
+    description: >
+      Como funciona: para cada categoria, define limite mensal. Sistema
+      mostra semáforo (verde/amarelo/vermelho) conforme o mês avança.
+      Inclui inteligência: "no ritmo atual você estoura X". Sem culpar,
+      sem ranking, sem comparação social — só fato + decisão.
+    outputs:
+      - output/06-orcamento-categoria.md
+
+  - id: roadmap_prioritario
+    name: "Roadmap prioritário (90 dias)"
+    agent: diana_cfo
+    description: >
+      Consolida tudo em ondas:
+      - Onda 1 (próximas 2 semanas) — fundação: alertas vencimento + redesign dashboard
+      - Onda 2 (mês 1) — visibilidade: previsão cartão + inteligência gasto
+      - Onda 3 (mês 2) — planejamento: metas + orçamento
+      - Onda 4 (mês 3) — refinamento: assinaturas, anomalias, conversação
+
+      Cada onda: o que entrega ao Iremar (frase do usuário: "agora eu consigo X").
+    inputs:
+      - output/02-mapa-proativo.md
+      - output/03-redesign-dashboard.md
+      - output/04-sistema-alertas.md
+      - output/05-modulo-metas.md
+      - output/06-orcamento-categoria.md
+    outputs:
+      - output/07-roadmap-90dias.md

@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { ProfileScopeToggle } from './ProfileScopeToggle';
+import type { ProfileScope } from '@/lib/profile-scope';
 
 const NAV_ADMIN = [
   { href: '/dashboard',        icon: '⌂', label: 'Início' },
-  { href: '/lancamentos',      icon: '≡', label: 'Lançamentos' },
+  { href: '/compromissos',     icon: '◫', label: 'A Pagar' },
   { href: '/lancamentos/novo', icon: '+', label: '' },
-  { href: '/contas',           icon: '◉', label: 'Contas' },
+  { href: '/lancamentos',      icon: '≡', label: 'Lançamentos' },
   { href: '#mais',             icon: '⋯', label: 'Mais' },
 ];
 
@@ -18,28 +20,50 @@ const NAV_OPERATOR = [
   { href: '/lancamentos',      icon: '≡', label: 'Lançamentos' },
   { href: '/lancamentos/novo', icon: '+', label: '' },
   { href: '/importar',         icon: '↑', label: 'Importar' },
-  { href: '/contas',           icon: '◉', label: 'Contas' },
+  { href: '#mais',             icon: '⋯', label: 'Mais' },
+];
+
+const MAIS_ITEMS_OPERATOR = [
+  { href: '/contas',     icon: '◉',  label: 'Contas',       desc: 'Saldos e contas bancárias' },
+  { href: '/acerto',     icon: '⚖️', label: 'Acerto Casal', desc: 'Fechamento Iremar × Juliana' },
+  { href: '/mes',        icon: '📅', label: 'Fechamento',   desc: 'Resumo do mês atual' },
+  { href: '/relatorios', icon: '📊', label: 'Relatórios',   desc: 'Resumos e gráficos' },
 ];
 
 const MAIS_ITEMS = [
-  { href: '/empresa',       icon: '🏢', label: 'Empresa',       desc: 'DRE e gestão i2 Soluções' },
-  { href: '/relatorios',    icon: '📊', label: 'Relatórios',    desc: 'Fluxo de caixa, contas a pagar' },
-  { href: '/importar',      icon: '↑',  label: 'Importar CSV',  desc: 'Importar extratos do cartão' },
-  { href: '/empresa/notas', icon: '🧾', label: 'Notas Fiscais', desc: 'NFs dos recebimentos da i2' },
+  { href: '/contas',          icon: '◉',  label: 'Contas',          desc: 'Saldos das contas bancárias' },
+  { href: '/importar',        icon: '↑',  label: 'Importar CSV',    desc: 'Importar extratos do cartão' },
+  { href: '/categorizar',     icon: '🏷️', label: 'Categorizar',     desc: 'Lançamentos pendentes' },
+  { href: '/empresa',         icon: '🏢', label: 'Empresa',         desc: 'DRE e gestão i2 Soluções' },
+  { href: '/relatorios',      icon: '📊', label: 'Relatórios',      desc: 'Fluxo de caixa, contas a pagar' },
+  { href: '/transferencias',  icon: '⇄',  label: 'Transferências',  desc: 'Movimentações entre contas' },
+  { href: '/acerto',          icon: '⚖️', label: 'Acerto Casal',    desc: 'Fechamento Iremar × Juliana (dia 13)' },
+  { href: '/empresa/notas',   icon: '🧾', label: 'Notas Fiscais',   desc: 'NFs dos recebimentos da i2' },
+  { href: '/backups',         icon: '🛡️', label: 'Backups',         desc: 'Pontos de restore antes de mudanças' },
 ];
 
 export function BottomNav({
   role,
   name = '',
+  scope = 'tudo',
 }: {
   role: 'admin' | 'operator';
   name?: string;
+  scope?: ProfileScope;
 }) {
   const pathname  = usePathname();
   const router    = useRouter();
   const [maisOpen, setMaisOpen] = useState(false);
 
+  const isOp = role === 'operator';
   const items = role === 'admin' ? NAV_ADMIN : NAV_OPERATOR;
+  const allMaisItems = role === 'admin' ? MAIS_ITEMS : MAIS_ITEMS_OPERATOR;
+  // Filtra "Mais" pelo escopo ativo
+  const maisItems = allMaisItems.filter(item => {
+    if (scope === 'pessoal' && (item.href === '/empresa' || item.href === '/empresa/notas')) return false;
+    if (scope === 'empresa' && (item.href === '/acerto' || item.href === '/categorizar' || item.href === '/mes')) return false;
+    return true;
+  });
 
   function handleClick(href: string) {
     if (href === '#mais') {
@@ -52,7 +76,7 @@ export function BottomNav({
   return (
     <>
       {/* ── Sidebar desktop (só admin) ─────────────────── */}
-      <Sidebar role={role} name={name} />
+      <Sidebar role={role} name={name} scope={scope} />
 
       {/* ── Bottom Nav (mobile) ────────────────────────── */}
       <nav
@@ -130,12 +154,18 @@ export function BottomNav({
             </div>
 
             <div className="px-4 pt-2 pb-5">
+              {/* Toggle de perfil — mobile */}
+              <div className="mb-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="text-white/25 text-[10px] uppercase tracking-widest mb-2 px-1">Visualizando</p>
+                <ProfileScopeToggle current={scope} locked={isOp} variant="full" />
+              </div>
+
               <p className="text-white/25 text-[10px] uppercase tracking-widest mb-3 px-1">
                 Menu
               </p>
 
               <div className="grid grid-cols-2 gap-2.5">
-                {MAIS_ITEMS.map((item) => {
+                {maisItems.map((item) => {
                   const isActive =
                     pathname === item.href || pathname.startsWith(item.href + '/');
                   return (

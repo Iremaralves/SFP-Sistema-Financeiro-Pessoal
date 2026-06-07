@@ -1,0 +1,87 @@
+name: i2-design
+description: >
+  Squad de design responsivo do i2 Finance. Avalia, prototipa e implementa uma
+  experiência visualmente atrativa e funcionalmente eficiente tanto no mobile
+  quanto no desktop, com liberdade criativa para sugerir perfumarias e melhorias
+  além do solicitado (gráficos, troca de tema, animações, ícones, microinterações).
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  prod_url: https://i2-finance-nqwixshu0-iremars-projects.vercel.app
+  design_system:
+    base: OLED dark mode (bg-black total)
+    style: Glassmorphism (rgba blanco + backdrop-filter blur)
+    palette:
+      iremar: '#3b82f6 → #6366f1 (azul-índigo)'
+      juliana: '#ec4899 → #f472b6 (rosa-pink)'
+      i2: '#f59e0b → #d97706 (âmbar)'
+      casal: '#06b6d4 (ciano)'
+      investment: '#10b981 (esmeralda)'
+    typography: tabular-nums para valores
+  users:
+    iremar: 'admin — desktop+mobile, usa tudo'
+    juliana: 'operator — só mobile, importa CSV e categoriza'
+
+deliverables:
+  primary:
+    - Layout desktop não-estourado (1024px+, 1280px+, 1440px+, 1920px+)
+    - Layout mobile mantido e refinado (< 768px)
+    - Sistema de troca de cor (light/dark/auto + paleta primária editável)
+    - Gráficos: barras (fluxo de caixa), donut (split despesas), linha (acumulado)
+    - Perfumarias criativas (animações, microinterações, easter eggs sutis)
+
+pipeline:
+  - id: ux_audit_desktop
+    name: "Auditoria UX Desktop"
+    agent: laura_uxdesktop
+    description: >
+      Visita as principais páginas no viewport desktop (1280px+). Identifica:
+      estouros (max-width ausentes), espaços vazios excessivos, ausência de
+      densidade de informação, hierarquia visual perdida, navegação subutilizada,
+      gráficos faltando.
+    outputs:
+      - output/01-audit-desktop.md
+
+  - id: proposta_design
+    name: "Proposta de Design System v2"
+    agent: rafa_designer
+    description: >
+      Com base na auditoria, propõe a v2 do design system:
+      breakpoints, max-width por contexto, grid responsivo, componentes que
+      precisam de variantes desktop, gráficos a implementar, paleta editável,
+      tema light opcional, animações principais.
+      INCLUI sugestões criativas além do solicitado (perfumarias).
+    inputs:
+      - output/01-audit-desktop.md
+    outputs:
+      - output/02-design-system-v2.md
+
+  - id: implementacao
+    name: "Implementação iterativa"
+    agent: bruno_dev
+    description: >
+      Implementa as mudanças na ordem proposta. Cada componente: refatora primeiro
+      sem quebrar, depois acrescenta melhorias. Foco em:
+      tailwind v4, sem libs pesadas, gráficos com SVG nativo ou recharts (já no projeto?),
+      ThemeProvider (next-themes), variáveis CSS para cores editáveis pelo usuário.
+    inputs:
+      - output/02-design-system-v2.md
+    outputs:
+      - output/03-implementacao.md
+      - apps/web/src/components/* (modificados/novos)
+      - apps/web/src/app/*/page.tsx (modificados)
+
+  - id: validacao
+    name: "Validação Visual"
+    agent: laura_uxdesktop
+    description: >
+      Verifica em ambos viewports se a implementação ficou conforme proposta.
+      Lista o que pode ser melhorado num próximo ciclo.
+    inputs:
+      - output/03-implementacao.md
+    outputs:
+      - output/04-validacao.md

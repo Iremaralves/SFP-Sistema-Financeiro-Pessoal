@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { toTransactions } from '@/lib/mappers';
 import { TransactionList } from '@/components/TransactionList';
 import { BottomNav } from '@/components/BottomNav';
@@ -42,6 +43,21 @@ export default async function LancamentosPage({
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
 
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
+  // Pré-carrega contas pra filtrar por escopo (pessoal x empresa)
+  const { data: accountsForScope } = await supabase
+    .from('accounts')
+    .select('id, kind')
+    .eq('household_id', profile.household_id);
+  const scopedAccountIds = (accountsForScope ?? [])
+    .filter(a => {
+      if (scope === 'pessoal') return a.kind !== 'company';
+      if (scope === 'empresa') return a.kind === 'company';
+      return true; // 'tudo'
+    })
+    .map(a => a.id);
+
   const params = await searchParams;
   const mes = params.mes ?? '';
   const responsavel = params.responsavel ?? '';
@@ -56,6 +72,14 @@ export default async function LancamentosPage({
     .from('transactions')
     .select('*')
     .eq('household_id', profile.household_id);
+
+  // Filtro por escopo (pessoal/empresa/tudo)
+  if (scopedAccountIds.length > 0 && scope !== 'tudo') {
+    query = query.in('account_id', scopedAccountIds);
+  } else if (scope !== 'tudo' && scopedAccountIds.length === 0) {
+    // Escopo selecionado mas sem contas — não retorna nada
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+  }
 
   // Filtro de mês
   if (mes === 'todos') {
@@ -120,7 +144,7 @@ export default async function LancamentosPage({
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-3">
+      <div className="px-4 md:px-8 py-4 space-y-3 page-container">
         {/* Filtros — Suspense necessário por useSearchParams */}
         <Suspense fallback={null}>
           <Filtros
@@ -135,7 +159,7 @@ export default async function LancamentosPage({
         <TransactionList transactions={transactions} showMeta={mes === 'todos' || !!responsavel || !!origem} />
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} scope={scope} />
     </div>
   );
 }

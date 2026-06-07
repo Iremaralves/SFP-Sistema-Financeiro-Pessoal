@@ -1,0 +1,128 @@
+name: i2-backup-restore
+description: >
+  Squad de salvaguarda. Garante que TODA mudança sensível em produção
+  (schema, massa de dados, features críticas) tenha um ponto de restore
+  antes. Implementa o sistema de snapshot via script CLI + página /backups
+  no app + integração com Supabase Storage.
+
+version: "1.0"
+language: pt-BR
+
+importancia: critica
+trigger: |
+  SEMPRE rodar antes de:
+  - Migrations no Supabase (DDL)
+  - UPDATEs em massa de dados (>10 linhas)
+  - DELETEs em massa
+  - Refatorações grandes do schema
+  - Importação de histórico
+  - Mudanças em produção que tocam código + dados juntos
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  supabase_project: jvfdzcouychlfxxnzams
+  tables_a_backupar:
+    - profiles
+    - households
+    - entities
+    - accounts
+    - categories
+    - categorization_rules
+    - recurring_commitments
+    - monthly_obligations
+    - transactions
+    - income_records
+    - fiscal_notes
+    - transfers
+    - csv_imports
+    - monthly_settlements
+
+solucao_proposta:
+  formato: JSON (compatível com pg_dump menos verboso)
+  storage:
+    primario: 'Local: /Users/iremaralvesii/Financeiro/backups/YYYYMMDD-HHmmss/'
+    secundario: 'Supabase Storage bucket "backups" (redundância)'
+  retencao: '90 dias automáticos, manual ilimitado'
+  estrategia_restore: |
+    Não fazer DROP TABLE + restore.
+    Fazer DELETE FROM + INSERT batch — preserva FKs.
+    Em caso de catástrofe: pg_restore via Supabase CLI.
+
+pipeline:
+  - id: design
+    name: "Design da estratégia de backup"
+    agent: alex_devops
+    description: >
+      Define:
+      - Estrutura do JSON (1 arquivo por table ou tudo junto?)
+      - Naming convention (timestamp + label opcional)
+      - Como diferenciar "backup automático" de "ponto de restore manual"
+      - Política de retenção (90 dias auto, manual perpétuo)
+      - Como verificar integridade do backup (checksum, contagem de rows)
+    outputs:
+      - output/01-design.md
+
+  - id: implementacao_cli
+    name: "Implementação CLI (script local)"
+    agent: alex_devops
+    description: >
+      Cria scripts em /Users/iremaralvesii/Financeiro/scripts/:
+      - backup.ts (faz dump de todas as tables em JSON)
+      - restore.ts (lê JSON e restaura tabelas)
+      - list-backups.ts (lista backups disponíveis)
+
+      Cada script:
+      - Usa Supabase JS client com service_role key
+      - Pega de SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY do .env.local
+      - Cria pasta com timestamp
+      - Mostra contagem de rows por table
+      - Retorna exit code 0 (sucesso) ou 1 (erro)
+
+      Adicionar comandos no package.json:
+        pnpm backup:create "label-opcional"
+        pnpm backup:list
+        pnpm backup:restore YYYYMMDD-HHmmss
+    outputs:
+      - output/02-cli-scripts.md
+      - scripts/backup.ts
+      - scripts/restore.ts
+      - scripts/list-backups.ts
+
+  - id: integracao_app
+    name: "Integração com o app (página /backups)"
+    agent: alex_devops
+    description: >
+      Cria página /backups (admin only) com:
+      - Botão "🛡️ Criar ponto de restore" → dispara backup com label
+      - Lista de backups disponíveis (timestamp, label, tamanho, # rows)
+      - Botão "↩️ Restaurar" em cada backup (com 2-step confirm)
+      - Aviso visual "este backup tem N dias"
+
+      Server actions:
+      - actionCreateBackup(label?) — dispara o script via spawn ou
+        chama Supabase Edge Function
+      - actionListBackups() — lê pasta /backups/ e Supabase Storage
+      - actionRestoreBackup(timestamp) — restaura com confirmação dupla
+
+      DECISÃO técnica: como o app está em Vercel (serverless), o backup
+      LOCAL não funciona na produção. Solução: usar Supabase Storage
+      como backup primário no app, e CLI local como secundário.
+    outputs:
+      - output/03-integracao-app.md
+      - app/backups/page.tsx
+      - app/backups/actions.ts
+
+  - id: testes
+    name: "Testes do fluxo backup-restore"
+    agent: alex_devops
+    description: >
+      Cria casos de teste:
+      - TC1: backup → restore → verificar contagens batem
+      - TC2: alteração intencional → restore → verificar reverteu
+      - TC3: backup com label → list → encontrar
+      - TC4: tentar restore de backup inexistente → erro tratado
+      - TC5: backup falha (sem internet/sem permissão) → erro tratado
+
+      Documenta como reverter em caso de catástrofe.
+    outputs:
+      - output/04-testes.md

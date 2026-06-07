@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
 import { DarBaixaButton } from './DarBaixaButton';
 import { FiltroMes } from './FiltroMes';
@@ -44,17 +45,37 @@ function gerarMeses() {
   return meses;
 }
 
+type StatusFilter = 'todos' | 'a_pagar' | 'pagos' | 'atrasados';
+type OrdemFilter = 'venc_asc' | 'venc_desc' | 'valor_desc' | 'valor_asc' | 'desc_asc';
+
+const STATUS_FILTERS: { id: StatusFilter; label: string; color: string }[] = [
+  { id: 'todos',     label: 'Todos',     color: '#94a3b8' },
+  { id: 'a_pagar',   label: 'A pagar',   color: '#fcd34d' },
+  { id: 'pagos',     label: 'Pagos',     color: '#34d399' },
+  { id: 'atrasados', label: 'Atrasados', color: '#f87171' },
+];
+
+const ORDEM_OPCOES: { id: OrdemFilter; label: string }[] = [
+  { id: 'venc_asc',   label: 'Vencimento ↑' },
+  { id: 'venc_desc',  label: 'Vencimento ↓' },
+  { id: 'valor_desc', label: 'Maior valor' },
+  { id: 'valor_asc',  label: 'Menor valor' },
+  { id: 'desc_asc',   label: 'A-Z' },
+];
+
 export default async function CompromissosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; entidade?: string }>;
+  searchParams: Promise<{ mes?: string; entidade?: string; status?: string; ordem?: string }>;
 }) {
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-  if (!profile || profile.role !== 'admin') redirect('/dashboard');
+  if (!profile) redirect('/login');
+
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
 
   const params = await searchParams;
   const meses = gerarMeses();
@@ -65,6 +86,25 @@ export default async function CompromissosPage({
 
   // Filtro de entidade: 'todos' | 'pessoal' | 'i2'
   const entidadeFiltro = params.entidade ?? 'todos';
+
+  // Filtros novos: status + ordenação
+  const statusFiltro = (params.status as StatusFilter) ?? 'todos';
+  const ordem = (params.ordem as OrdemFilter) ?? 'venc_asc';
+
+  // Helper para construir URLs preservando filtros
+  function buildHref(overrides: Record<string, string>): string {
+    const sp = new URLSearchParams();
+    if (mes !== currentMonth) sp.set('mes', mes);
+    if (entidadeFiltro !== 'todos') sp.set('entidade', entidadeFiltro);
+    if (statusFiltro !== 'todos') sp.set('status', statusFiltro);
+    if (ordem !== 'venc_asc') sp.set('ordem', ordem);
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === '' || v === 'todos' || v === 'venc_asc') sp.delete(k);
+      else sp.set(k, v);
+    }
+    const qs = sp.toString();
+    return `/compromissos${qs ? '?' + qs : ''}`;
+  }
 
   const mesLabel = meses.find(m => m.value === mes)?.label ?? mes;
 
@@ -93,9 +133,14 @@ export default async function CompromissosPage({
     .eq('active', true)
     .order('due_day', { ascending: true });
 
-  if (entidadeFiltro === 'i2' && i2Entity) {
+  // Escopo global (cookie) tem prioridade sobre filtro de entidade da URL
+  const effectiveEntidade = scope === 'empresa' ? 'i2'
+    : scope === 'pessoal' ? 'pessoal'
+    : entidadeFiltro;
+
+  if (effectiveEntidade === 'i2' && i2Entity) {
     query = query.eq('entity_id', i2Entity.id);
-  } else if (entidadeFiltro === 'pessoal' && famEntity) {
+  } else if (effectiveEntidade === 'pessoal' && famEntity) {
     query = query.eq('entity_id', famEntity.id);
   }
 
@@ -158,8 +203,24 @@ export default async function CompromissosPage({
     };
   });
 
-  const boletoPixRows = rows.filter(r => !r.isCredit);
-  const creditRows    = rows.filter(r => r.isCredit);
+  // Aplicar filtro de status
+  let filteredRows = rows;
+  if (statusFiltro === 'a_pagar')   filteredRows = rows.filter(r => !r.isPaid);
+  if (statusFiltro === 'pagos')     filteredRows = rows.filter(r => r.isPaid);
+  if (statusFiltro === 'atrasados') filteredRows = rows.filter(r => r.status === 'overdue' && !r.isPaid);
+
+  // Aplicar ordenação
+  filteredRows = [...filteredRows].sort((a, b) => {
+    if (ordem === 'venc_asc')   return a.commitment.due_day - b.commitment.due_day;
+    if (ordem === 'venc_desc')  return b.commitment.due_day - a.commitment.due_day;
+    if (ordem === 'valor_desc') return Number(b.commitment.amount) - Number(a.commitment.amount);
+    if (ordem === 'valor_asc')  return Number(a.commitment.amount) - Number(b.commitment.amount);
+    if (ordem === 'desc_asc')   return a.commitment.description.localeCompare(b.commitment.description);
+    return 0;
+  });
+
+  const boletoPixRows = filteredRows.filter(r => !r.isCredit);
+  const creditRows    = filteredRows.filter(r => r.isCredit);
 
   // Métricas boleto/PIX
   const bpTotal    = boletoPixRows.reduce((s, r) => s + Number(r.commitment.amount), 0);
@@ -201,14 +262,10 @@ export default async function CompromissosPage({
         <div className="flex gap-2 mt-3">
           {tabs.map(tab => {
             const isActive = entidadeFiltro === tab.id;
-            const searchP = new URLSearchParams();
-            if (mes !== currentMonth) searchP.set('mes', mes);
-            if (tab.id !== 'todos') searchP.set('entidade', tab.id);
-            const href = `/compromissos${searchP.toString() ? '?' + searchP.toString() : ''}`;
             return (
               <Link
                 key={tab.id}
-                href={href}
+                href={buildHref({ entidade: tab.id })}
                 className="flex-1 py-1.5 rounded-xl text-center text-xs font-semibold transition-all"
                 style={{
                   background: isActive ? `${tab.color}20` : 'rgba(255,255,255,0.04)',
@@ -221,9 +278,54 @@ export default async function CompromissosPage({
             );
           })}
         </div>
+
+        {/* Filtros de status + ordenação */}
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
+          {/* Status pills */}
+          <div className="flex gap-1.5 flex-1 overflow-x-auto hide-scrollbar">
+            {STATUS_FILTERS.map(sf => {
+              const isActive = statusFiltro === sf.id;
+              return (
+                <Link
+                  key={sf.id}
+                  href={buildHref({ status: sf.id })}
+                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{
+                    background: isActive ? `${sf.color}22` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${isActive ? sf.color + '55' : 'rgba(255,255,255,0.08)'}`,
+                    color: isActive ? sf.color : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  {sf.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Ordenação pills */}
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar flex-shrink-0">
+            {ORDEM_OPCOES.map(o => {
+              const isActive = ordem === o.id;
+              return (
+                <Link
+                  key={o.id}
+                  href={buildHref({ ordem: o.id })}
+                  className="px-2.5 py-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{
+                    background: isActive ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${isActive ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    color: isActive ? '#a5b4fc' : 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  {o.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="px-4 py-4 space-y-5">
+      <div className="px-4 md:px-8 py-4 space-y-5 page-container">
 
         {/* ── Seção Boleto / PIX ─────────────────────────────── */}
         <section className="space-y-2">
@@ -283,6 +385,18 @@ export default async function CompromissosPage({
                         <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
                         <span className="text-[10px] text-white/20">·</span>
                         <span className="text-[10px] text-white/35">{pmIcon} {recLabel}</span>
+                        {c.paid_by && c.paid_by !== c.responsible && (
+                          <>
+                            <span className="text-[10px] text-white/20">·</span>
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                              style={{
+                                background: c.paid_by === 'juliana' ? 'rgba(236,72,153,0.12)' : 'rgba(99,102,241,0.12)',
+                                color:      c.paid_by === 'juliana' ? '#f472b6' : '#a5b4fc',
+                              }}>
+                              paga: {c.paid_by === 'juliana' ? 'Juliana' : c.paid_by === 'iremar' ? 'Iremar' : c.paid_by}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </Link>
 
@@ -374,7 +488,7 @@ export default async function CompromissosPage({
         )}
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} scope={scope} />
     </div>
   );
 }

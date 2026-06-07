@@ -10,11 +10,15 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "db:types": "supabase gen types typescript --local > packages/db/src/database.types.ts",
-    "db:migrate": "supabase db push"
+    "db:migrate": "supabase db push",
+    "backup:create": "tsx scripts/backup.ts",
+    "backup:list": "tsx scripts/list-backups.ts",
+    "backup:restore": "tsx scripts/restore.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "next": "^15.1.4",
+    "tsx": "^4.19.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.3"
   },

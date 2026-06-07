@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
 import { ImportClient } from './ImportClient';
 import { listDriveFiles } from './actions';
@@ -46,6 +47,9 @@ export default async function ImportarPage() {
     }))
     // Esconde extratos NU_* (não são faturas do cartão) — vão para upload manual
     .filter((f) => !/^NU_\d/i.test(f.name));
+
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
 
   return (
     <div className="min-h-screen pb-28 relative overflow-hidden md:pl-60">
@@ -95,7 +99,7 @@ export default async function ImportarPage() {
         )}
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} scope={scope} />
     </div>
   );
 }

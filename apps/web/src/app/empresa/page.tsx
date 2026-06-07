@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
 import { FaturamentoForm } from './FaturamentoForm';
 import { FiscalNoteForm } from './FiscalNoteForm';
@@ -38,6 +39,10 @@ export default async function EmpresaPage({
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile || profile.role !== 'admin') redirect('/dashboard');
+
+  // Se admin tá com escopo Pessoal, /empresa não faz sentido — manda pro dashboard
+  const _scopeEarly = await getEffectiveScope(profile.role as 'admin' | 'operator');
+  if (_scopeEarly === 'pessoal') redirect('/dashboard');
 
   const params = await searchParams;
   const meses = gerarMeses();
@@ -123,6 +128,9 @@ export default async function EmpresaPage({
     return m === currentMonth ? '/empresa' : `/empresa?mes=${m}`;
   }
 
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
+
   return (
     <div className="min-h-screen pb-28 md:pl-60">
       {/* Header */}
@@ -173,7 +181,7 @@ export default async function EmpresaPage({
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 md:px-8 py-4 space-y-4 page-container">
 
         {/* ── DRE Simplificado ──────────────────────────── */}
         <section

@@ -1,0 +1,84 @@
+name: i2-cartao-control
+description: >
+  Squad especializado em gestão e controle do cartão de crédito (NuBank).
+  Modela: valor atual vs valor futuro (provisão), fluxo de parcelas + fixos
+  recorrentes, alertas em tempo real, push notifications, limites por categoria.
+  Objetivo: dar ao Iremar visibilidade total do gasto antes da fatura fechar.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  cartao_atual: NuBank (única conta credit_card no sistema)
+  fechamento_fatura: 'Dia 13 de cada mês'
+  vencimento_fatura: 'Dia 20 de cada mês'
+  dor_principal: |
+    Hoje só sei o valor da fatura quando o Nubank fecha (dia 13). Não tenho
+    visibilidade em tempo real do que está acumulando no mês corrente, nem
+    do que virá no próximo (parcelas + recorrentes).
+
+deliverables:
+  primary:
+    - Conceito "Valor atual" vs "Valor projetado" do cartão por mês
+    - Modelagem de parcelas futuras (já em transactions com installment_current/total)
+    - Modelagem de fixos no cartão (recurring_commitments com payment_method='credit_card')
+    - Telas: card no dashboard "Cartão Hoje" + página detalhada
+    - Push notifications (web push API + Service Worker)
+    - Alertas de limite por categoria opcional
+    - Insights "Você gastou +X% vs mês passado"
+
+pipeline:
+  - id: modelagem
+    name: "Modelagem matemática do cartão"
+    agent: leo_eng
+    description: >
+      Define exatamente como calcular:
+      - Valor atual da fatura aberta (transactions do ciclo atual)
+      - Valor projetado próxima fatura (fixos do cartão + parcelas)
+      - Valor disponível (limite - valor atual)
+      - Curva de gasto diário (média móvel)
+      - Comparativo mês a mês
+      Documenta as queries SQL e os componentes UI necessários.
+    outputs:
+      - output/01-modelagem.md
+
+  - id: ui_dashboard_cartao
+    name: "UI Card e Página do Cartão"
+    agent: bia_designer
+    description: >
+      Desenha (em código JSX/Tailwind) o card "Cartão NuBank" do dashboard e
+      a página completa /cartao com:
+      gauge (valor atual / limite), gráfico de barras (últimos 6 meses),
+      lista das próximas parcelas, badge de variação vs mês passado.
+    inputs:
+      - output/01-modelagem.md
+    outputs:
+      - output/02-ui-cartao.md
+
+  - id: push_notifications
+    name: "Push Notifications no PWA"
+    agent: leo_eng
+    description: >
+      Define como implementar push: Service Worker, VAPID keys, fluxo de
+      assinatura, server action que dispara via WebPush API. Casos de uso:
+      gasto acima da média diária, fatura projetada > limite, lembrete de
+      acerto dia 13.
+    inputs:
+      - output/01-modelagem.md
+    outputs:
+      - output/03-push-notifications.md
+
+  - id: roadmap
+    name: "Roadmap de implementação"
+    agent: leo_eng
+    description: >
+      Prioriza features por valor entregue. Próximo squad pode pegar essa
+      especificação e implementar direto.
+    inputs:
+      - output/01-modelagem.md
+      - output/02-ui-cartao.md
+      - output/03-push-notifications.md
+    outputs:
+      - output/04-roadmap-cartao.md

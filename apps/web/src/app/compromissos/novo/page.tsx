@@ -75,6 +75,7 @@ export default function NovoCompromissoPage() {
       amount: parseFloat(amount.replace(',', '.')),
       due_day: parseInt(dueDay),
       responsible,
+      paid_by: (responsible === 'casal' ? 'iremar' : responsible) as 'iremar' | 'juliana' | 'casal' | 'i2',
       active: true,
       payment_method: paymentMethod,
       recurrence_type: recurrenceType,

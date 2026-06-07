@@ -1,0 +1,83 @@
+name: gestao-multi-entidade
+description: >
+  Analisa, arquiteta e implementa a gestão financeira multi-entidade no i2 Finance:
+  separação entre finanças pessoais (Iremar/Família) e empresariais (i2 Soluções Digitais),
+  incluindo tratamento do cartão Nubank compartilhado PF+PJ.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  supabase_project: jvfdzcouychlfxxnzams
+  stack: "Next.js 15, Supabase, Tailwind v4, pnpm monorepo"
+
+entities:
+  - id: iremar_pessoal
+    label: "Iremar Pessoal"
+    account: "Nubank PF"
+    current_tag: "responsible=iremar"
+  - id: i2_solucoes
+    label: "i2 Soluções Digitais"
+    account: "Inter Empresa (PJ)"
+    current_tag: "responsible=i2"
+    note: "Usa cartão Nubank de Iremar para algumas despesas"
+  - id: familia
+    label: "Família (Casal/Juliana)"
+    account: "Compartilhado"
+    current_tag: "responsible=casal ou juliana"
+  - id: nubank_compartilhado
+    label: "Nubank Compartilhado (PF+PJ)"
+    note: "Cartão pessoal do Iremar usado também pela i2 — precisa separar"
+
+business_needs:
+  - Fluxo de caixa PJ (i2 Soluções separado)
+  - Contas fixas PJ (DAS, contador, serviços)
+  - DRE simplificado da empresa
+  - Controle de reembolso PJ→PF (o que a i2 deve ao Iremar)
+
+pipeline:
+  - id: analise
+    name: "Análise do Sistema Atual"
+    agent: analista
+    description: >
+      Lê o código atual (schema, pages, actions), mapeia o que já existe,
+      identifica gaps e documenta o estado atual das entidades financeiras.
+    outputs:
+      - output/01-analise-sistema-atual.md
+
+  - id: arquitetura
+    name: "Proposta de Arquitetura"
+    agent: arquiteto
+    description: >
+      Com base na análise, propõe 2 opções de arquitetura multi-entidade,
+      com trade-offs claros: uma rápida (menor esforço, para Beta) e uma
+      robusta (escalável, para v1.0). Inclui diagrama de schema, novas páginas
+      e estimativa de esforço.
+    inputs:
+      - output/01-analise-sistema-atual.md
+    outputs:
+      - output/02-proposta-arquitetura.md
+
+  - id: decisao
+    name: "Decisão de Arquitetura"
+    type: checkpoint
+    description: >
+      Iremar revisa as 2 propostas e decide qual caminho seguir.
+      Pode ajustar escopo, priorizar funcionalidades ou combinar abordagens.
+    inputs:
+      - output/02-proposta-arquitetura.md
+    outputs:
+      - output/03-decisao-arquitetura.md
+
+  - id: implementacao
+    name: "Implementação"
+    agent: desenvolvedor
+    description: >
+      Implementa a arquitetura escolhida: SQL migrations, tipos TypeScript,
+      server actions, páginas Next.js e atualização do BottomNav/dashboard.
+    inputs:
+      - output/03-decisao-arquitetura.md
+    outputs:
+      - output/04-implementacao-log.md

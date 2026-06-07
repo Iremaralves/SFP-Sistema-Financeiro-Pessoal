@@ -1,0 +1,87 @@
+name: time-de-testes
+description: >
+  Time de QA do i2 Finance. Testa todas as funcionalidades implementadas:
+  análise estática de código, validação do banco de dados, casos de teste
+  por fluxo e relatório consolidado de bugs e riscos.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  supabase_project: jvfdzcouychlfxxnzams
+  prod_url: https://i2-finance-6bkw74qna-iremars-projects.vercel.app
+
+features_to_test:
+  - id: dar_baixa
+    label: "Dar baixa em contas fixas (boleto/PIX)"
+    pages: [/compromissos]
+  - id: filtro_entidade
+    label: "Filtro Todas/Família/i2 em /compromissos"
+    pages: [/compromissos]
+  - id: seletor_conta
+    label: "Seletor de conta PF/PJ em lançamentos"
+    pages: [/lancamentos/novo, /lancamentos/[id]]
+  - id: empresa_dre
+    label: "Dashboard /empresa com DRE"
+    pages: [/empresa]
+  - id: empresa_faturamento
+    label: "Registrar/editar faturamento da i2"
+    pages: [/empresa]
+  - id: compromissos_crud
+    label: "CRUD completo de contas fixas"
+    pages: [/compromissos, /compromissos/novo, /compromissos/[id]]
+  - id: lancamentos_crud
+    label: "CRUD de lançamentos manuais"
+    pages: [/lancamentos, /lancamentos/novo, /lancamentos/[id]]
+  - id: multi_entidade
+    label: "Separação PF/PJ nas entidades"
+    tables: [entities, transactions, recurring_commitments]
+
+pipeline:
+  - id: analise_codigo
+    name: "Análise Estática de Código"
+    agent: ana_qa
+    description: >
+      Lê todos os arquivos das features em teste. Identifica:
+      bugs lógicos, condições de borda não tratadas, tipos incorretos,
+      queries Supabase sem tratamento de erro, estados de loading/error ausentes.
+    outputs:
+      - output/01-analise-codigo.md
+
+  - id: validacao_banco
+    name: "Validação do Banco de Dados"
+    agent: diego_dba
+    description: >
+      Executa queries SQL diretas no Supabase para validar:
+      integridade referencial, dados orfãos, entity_id nulos indevidos,
+      reference_month no formato correto, policies RLS funcionando.
+    outputs:
+      - output/02-validacao-banco.md
+
+  - id: casos_de_teste
+    name: "Casos de Teste por Fluxo"
+    agent: carol_tester
+    description: >
+      Cria checklist detalhado de casos de teste manuais para cada feature,
+      incluindo cenários felizes, edge cases e cenários de erro.
+      Executa os testes que podem ser simulados via código.
+    inputs:
+      - output/01-analise-codigo.md
+    outputs:
+      - output/03-casos-de-teste.md
+
+  - id: relatorio_final
+    name: "Relatório Consolidado"
+    agent: ana_qa
+    description: >
+      Consolida os achados dos 3 passos anteriores. Classifica bugs por
+      severidade (crítico/alto/médio/baixo). Lista o que está aprovado.
+      Propõe prioridade de correção para o Beta.
+    inputs:
+      - output/01-analise-codigo.md
+      - output/02-validacao-banco.md
+      - output/03-casos-de-teste.md
+    outputs:
+      - output/04-relatorio-final.md

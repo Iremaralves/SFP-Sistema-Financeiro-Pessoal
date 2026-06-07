@@ -1,0 +1,74 @@
+name: i2-melhorias
+description: >
+  Squad de avaliação contínua do i2 Finance. Analisa o sistema em 4 dimensões:
+  UX/usabilidade, performance técnica, segurança e oportunidades de produto.
+  Produz um relatório de melhorias priorizadas por impacto vs esforço.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  supabase_project: jvfdzcouychlfxxnzams
+  prod_url: https://i2-finance-6bkw74qna-iremars-projects.vercel.app
+  users:
+    admin: "Iremar Alves — gestor, usa desktop e mobile, conhece TI"
+    operator: "Juliana — usuária leiga, usa só mobile, precisa de UX simples"
+
+pipeline:
+  - id: ux_audit
+    name: "Auditoria de UX e Usabilidade"
+    agent: sofia_ux
+    description: >
+      Analisa todas as telas do sistema do ponto de vista do usuário final.
+      Avalia: clareza das informações, fluxos confusos, feedbacks ausentes,
+      consistência visual, acessibilidade básica, experiência mobile vs desktop.
+      Entrevista imaginária: "O que Juliana não conseguiria fazer sozinha?"
+    outputs:
+      - output/01-ux-audit.md
+
+  - id: performance_audit
+    name: "Auditoria de Performance e Código"
+    agent: pedro_perf
+    description: >
+      Analisa o código em busca de oportunidades de performance:
+      queries N+1, dados desnecessários sendo buscados, falta de cache,
+      componentes re-renderizando sem necessidade, bundle size,
+      Server Components sendo usados onde Client seria melhor e vice-versa.
+    inputs:
+      - output/01-ux-audit.md
+    outputs:
+      - output/02-performance-audit.md
+
+  - id: produto_oportunidades
+    name: "Oportunidades de Produto"
+    agent: lena_pm
+    description: >
+      Com visão de produto, identifica funcionalidades de alto valor que estão
+      faltando ou incompletas. Considera o contexto real: casal, gestão i2 Soluções,
+      Juliana como usuária não-técnica. Pensa em: automações úteis, integrações,
+      relatórios que faltam, fluxos que poderiam ser mais simples.
+      Prioriza por impacto real na vida do Iremar e da Juliana.
+    inputs:
+      - output/01-ux-audit.md
+      - output/02-performance-audit.md
+    outputs:
+      - output/03-oportunidades-produto.md
+
+  - id: plano_melhorias
+    name: "Plano de Melhorias Consolidado"
+    agent: sofia_ux
+    description: >
+      Consolida os achados das 3 análises em um plano de melhorias priorizado.
+      Usa matriz Impacto × Esforço para categorizar cada melhoria.
+      Agrupa em: Quick Wins (alto impacto, baixo esforço), Grandes Apostas
+      (alto impacto, alto esforço), Fill-ins (baixo impacto, baixo esforço),
+      e Thankless Tasks (baixo impacto, alto esforço — não fazer).
+      Resultado final: roadmap acionável para os próximos 30/60/90 dias.
+    inputs:
+      - output/01-ux-audit.md
+      - output/02-performance-audit.md
+      - output/03-oportunidades-produto.md
+    outputs:
+      - output/04-plano-melhorias.md

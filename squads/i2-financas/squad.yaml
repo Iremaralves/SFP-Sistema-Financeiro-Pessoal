@@ -1,0 +1,79 @@
+name: i2-financas
+description: >
+  Squad estratégico de finanças pessoais e empresariais. Define regras de
+  classificação, organização contábil mínima, KPIs e relatórios relevantes
+  para um casal + microempresa (MEI/Simples Nacional Fator R). Trabalha em
+  conjunto com o squad de design para que os relatórios fiquem bonitos e úteis.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  realidade_iremar:
+    pj: 'i2 Soluções Digitais (Simples Nacional, contador usa Fator R)'
+    eventos_recorrentes:
+      - DAS (variável, dep. do faturamento + NFs recebidas no mês)
+      - INSS, Pró-labore (R$ 5.000), Retirada de lucros (variável ~3k)
+    despesas_pf_fixas: 17 compromissos cadastrados (já mapeados)
+    estrategia_pessoal:
+      - Tesouro Direto R$ 1.000/mês (Iremar 100% — era casal)
+      - Reserva de Segurança R$ 700/mês (caixinha NuBank)
+    acerto: 'Dia 13 (fechamento fatura) — Iremar × Juliana'
+
+deliverables:
+  primary:
+    - Regras claras de separação PF × PJ (entity_id correto em cada caso)
+    - Plano de contas mínimo (categorias relevantes para análise)
+    - KPIs essenciais para PF (taxa de poupança, % gasto fixo, índice fatura/receita)
+    - KPIs essenciais para PJ (margem líquida, custo fixo mensal, Fator R em %, projeção DAS)
+    - Relatórios que faltam (DRE detalhado, fluxo PJ vs PF, projeção 90 dias)
+    - Regras de quando uma despesa do cartão é PF, casal ou compras pessoais Juliana
+
+pipeline:
+  - id: diagnostico
+    name: "Diagnóstico contábil do estado atual"
+    agent: marcos_contador
+    description: >
+      Analisa os dados existentes no Supabase. Identifica:
+      categorizações faltantes, fragmentações errôneas, regras implícitas
+      que ainda não estão documentadas, oportunidades de KPIs imediatos.
+    outputs:
+      - output/01-diagnostico.md
+
+  - id: plano_contas
+    name: "Plano de contas + regras"
+    agent: marcos_contador
+    description: >
+      Define categorias canônicas para o sistema. Inclui regras de classificação
+      automática (palavras-chave para feira de casa, escola, etc.).
+      Define o que conta como custo fixo vs variável, despesa pessoal vs investimento.
+    inputs:
+      - output/01-diagnostico.md
+    outputs:
+      - output/02-plano-contas.md
+
+  - id: kpis_relatorios
+    name: "KPIs + relatórios relevantes"
+    agent: paula_cfo
+    description: >
+      Lista KPIs prioritários (PF e PJ) e quais relatórios o app deve ter para
+      gerar valor real: análises de tendência, comparativos mensais, projeções
+      simples sem precisar de IA. Cada relatório com mockup textual (estrutura).
+    inputs:
+      - output/02-plano-contas.md
+    outputs:
+      - output/03-kpis-relatorios.md
+
+  - id: roadmap_implementacao
+    name: "Roadmap de implementação"
+    agent: paula_cfo
+    description: >
+      Prioriza os relatórios e KPIs por ROI imediato. Define o que vale virar
+      feature já, o que pode esperar. Conecta com o squad i2-design (entrega
+      especificação de gráficos a serem desenhados).
+    inputs:
+      - output/03-kpis-relatorios.md
+    outputs:
+      - output/04-roadmap-financas.md

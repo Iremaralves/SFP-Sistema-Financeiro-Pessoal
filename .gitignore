@@ -11,3 +11,6 @@ supabase/.temp
 ~/.i2fin
 apps/cli/bin
 .vercel
+
+# Backups locais (nunca commitar — contém dados financeiros)
+/backups/

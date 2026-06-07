@@ -1,0 +1,106 @@
+name: i2-historico-import
+description: >
+  Squad de EXTRAÇÃO DE LEARNINGS do sistema antigo (Meu Dinheiro). O objetivo
+  NÃO é migrar transações, é ENTENDER A ESTRUTURA que Iremar usava:
+  categorias, subcategorias, centros de custo, contas bancárias, formas de
+  pagamento. A partir disso, propõe o que faz sentido implementar no i2 Finance
+  (que ainda não tem centro de custo, por exemplo). Senso crítico rigoroso —
+  só importa estrutura que agrega valor real.
+
+version: "2.0"
+language: pt-BR
+
+mudanca_escopo: |
+  v1 (descartado): "importar X linhas de histórico"
+  v2 (atual): "entender estrutura e copiar o que faz sentido"
+
+  Motivos da mudança:
+  - Iremar quer ESTUDAR como usava o sistema antigo
+  - Centro de custos ainda não foi implementado no i2-finance
+  - Risco de quebrar o que já está funcionando hoje
+  - Categorias canônicas estão sendo definidas pelo i2-financas
+  - "o que passou passou" — não há valor em migrar transações antigas
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  arquivos:
+    iremar_pf: /Users/iremaralvesii/Financeiro/squads/i2-historico-import/meu_dinheiro_iremar.csv
+    i2_pj:     /Users/iremaralvesii/Financeiro/squads/i2-historico-import/meu_dinheiro_i2.csv
+  schema_atual_i2finance:
+    entities:     'Família (personal) | i2 Soluções (business)'
+    accounts:     'Conta Iremar, Conta Juliana, i2 Soluções, Cartão Nubank, NuInvest, Caixinha'
+    responsibles: 'iremar | juliana | casal | i2'
+    categories:   'tabela VAZIA — será populada pelo i2-financas'
+    centro_custo: 'NÃO IMPLEMENTADO'
+
+regra_critica: |
+  - NUNCA importar transactions (escopo v1 — descartado)
+  - NUNCA misturar PF/PJ
+  - SEMPRE criar ponto de restore antes de qualquer mudança no DB
+  - SEMPRE validar com time-de-testes antes de aplicar
+  - Preservar o que já funciona acima de tudo
+
+pipeline:
+  - id: analise_estrutura
+    name: "Análise estrutural — entender como Iremar usava"
+    agent: bruno_analista
+    description: >
+      Lê os 2 CSVs e extrai a ESTRUTURA usada (não os dados):
+      - Lista única de Categorias × Subcategorias (PF e PJ separadas)
+      - Lista única de Centros de Custo (PJ tem isso, PF talvez)
+      - Lista única de Contas bancárias mencionadas
+      - Tipos de Forma de Pagamento usados
+      - Padrões de uso (ex: "Iremar usava 'Projeto' como tag de cliente?")
+      - Evolução das categorias ao longo do tempo (Iremar mudou nomes)
+
+      Foco: O QUE Iremar usava, NÃO O QUANTO.
+    outputs:
+      - output/v2-01-estrutura.md
+
+  - id: recomendacoes
+    name: "Recomendações de estrutura para o i2-finance"
+    agent: rita_critica
+    description: >
+      Avalia COM SENSO CRÍTICO o que vale copiar para o i2-finance.
+      Para cada item analisado pelo Bruno:
+      - Vale implementar no i2-finance? ✅/❌
+      - Justificativa (não copie só porque existia no Meu Dinheiro)
+      - Prioridade (alta/média/baixa)
+      - Esforço estimado
+      - Conflito com decisões já tomadas? (cuidado especial)
+
+      Atenção especial a:
+      1. CENTRO DE CUSTOS — vale criar essa coluna em transactions? Para PJ
+         pode ser útil (separar gastos por projeto/cliente). Para PF pode ser
+         desnecessário (já temos entity_id + responsible)
+      2. CATEGORIAS PJ — quais subcategorias do Meu Dinheiro são úteis para
+         Fator R (separação folha vs outras receitas)
+      3. CONTAS BANCÁRIAS — Meu Dinheiro tem alguma conta que ainda não está
+         cadastrada no i2-finance?
+      4. FORMA DE PAGAMENTO — Meu Dinheiro tem opções que faltam no i2?
+
+      Rita: NÃO concorda só porque era do sistema antigo. "Centro de custo
+      adiciona complexidade — só vale se Iremar realmente vai usar para
+      relatórios PJ."
+    inputs:
+      - output/v2-01-estrutura.md
+    outputs:
+      - output/v2-02-recomendacoes.md
+
+  - id: plano_implementacao
+    name: "Plano de implementação seletivo"
+    agent: bruno_analista
+    description: >
+      Para cada recomendação aprovada pela Rita, descreve:
+      - Mudança no schema (se houver) — DDL exato
+      - Mudança na UI (se houver) — quais telas
+      - Migração de dados existentes (se houver) — null safe
+      - Como o time-de-testes deve validar
+      - Como reverter se der ruim (ponto de restore necessário?)
+
+      Estrutura: cada mudança autocontida, pode ser implementada
+      individualmente sem dependência.
+    inputs:
+      - output/v2-02-recomendacoes.md
+    outputs:
+      - output/v2-03-plano-implementacao.md

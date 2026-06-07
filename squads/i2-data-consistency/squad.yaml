@@ -1,0 +1,75 @@
+name: i2-data-consistency
+description: >
+  Squad de consistência de dados e estado do app. Reconcilia valores entre
+  telas que devem mostrar a mesma informação. Define glossário visual claro
+  ("Fatura" vs "Saldo" vs "Patrimônio") e garante que cada tela mostra a
+  visão correta para sua função.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  supabase_project: jvfdzcouychlfxxnzams
+
+problemas_para_resolver:
+  - id: D1
+    titulo: '/contas mostra valores diferentes do /dashboard'
+    detalhe: |
+      Dashboard mostra "Total da fatura" = R$ 3.238,94 (ciclo 13/05 → 12/06 do cartão).
+      Contas mostra "Total da fatura" usando calculateSettlement com mês calendário (2026-05).
+      Ambos chamam de "fatura" mas calculam diferente. Usuário fica confuso.
+    arquivos: [app/contas/page.tsx, app/dashboard/page.tsx]
+
+  - id: D2
+    titulo: 'Glossário visual confuso'
+    detalhe: |
+      "Total da fatura" aparece em /contas e /dashboard com semânticas diferentes.
+      "Patrimônio total" também é potencialmente confuso (inclui cartão negativo?).
+      Definir termos canônicos e usar consistentemente.
+
+  - id: D3
+    titulo: 'Saldo do cartão na /contas pode estar inconsistente'
+    detalhe: |
+      Saldo do Cartão Nubank = opening_balance + sum(amount). Mas se filtramos
+      is_transfer=false no dashboard mas NÃO na /contas, os valores divergem.
+      Decidir: incluir transferências no saldo da conta? (sim, financeiramente
+      correto, porque movimentação entre contas afeta saldo).
+
+pipeline:
+  - id: diagnostico
+    name: "Diagnóstico de inconsistências"
+    agent: marcos_data
+    description: >
+      Para cada par de telas que mostra valores monetários do mesmo conceito:
+      lista o cálculo de cada uma, identifica onde divergem, propõe valor
+      canônico. Exemplo: "Total da fatura" no dashboard usa X, na contas usa Y,
+      o correto é Z.
+    outputs:
+      - output/01-diagnostico.md
+
+  - id: glossario
+    name: "Glossário visual + remapeamento de termos"
+    agent: marcos_data
+    description: >
+      Define os termos canônicos: "Fatura aberta", "Saldo da conta",
+      "Patrimônio líquido", "A pagar este mês", "A receber este mês".
+      Para cada termo: definição, fórmula, onde aparece, exemplo numérico.
+    inputs:
+      - output/01-diagnostico.md
+    outputs:
+      - output/02-glossario.md
+
+  - id: implementacao
+    name: "Implementar correções nas telas"
+    agent: marcos_data
+    description: >
+      Aplica o glossário. Renomeia rótulos em /contas e /dashboard onde
+      necessário. Ajusta cálculos para que mesmo conceito mostre o mesmo
+      valor. Garante que /contas e /dashboard sejam complementares (visão
+      patrimonial vs visão de fatura) e NÃO conflitantes.
+    inputs:
+      - output/02-glossario.md
+    outputs:
+      - output/03-implementacao.md

@@ -1,0 +1,113 @@
+name: i2-paridade-ux
+description: >
+  Squad de paridade de experiência entre Admin (Iremar) e Operator (Juliana).
+  Garante que toda funcionalidade visível para um usuário também esteja
+  disponível e bem implementada para o outro quando faz sentido funcionalmente.
+  Também trata pequenos detalhes de UX que melhoram a usabilidade diária.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  usuarios:
+    iremar: 'admin — desktop+mobile, gerencia empresa, finanças, NFs'
+    juliana: 'operator — só mobile, importa CSV, categoriza, vê parte dela'
+
+problemas_para_resolver:
+  - id: P1
+    titulo: 'Ver descrição completa da transação'
+    detalhe: 'Descrições estão sendo truncadas (truncate) — usuário não consegue identificar o lançamento. Implementar expand ao tocar, tooltip ou modal.'
+    paginas: [/categorizar, /lancamentos, /dashboard]
+
+  - id: P2
+    titulo: 'Paridade Admin × Operator'
+    detalhe: 'Squad anterior só atualizou DashboardAdmin com gráficos/grids. DashboardOperator ficou sem. Replicar onde fizer sentido.'
+    arquivos: [components/DashboardAdmin.tsx, components/DashboardOperator.tsx]
+
+  - id: P3
+    titulo: 'Iremar não consegue acessar /importar'
+    detalhe: 'O link sumiu da nav dele em algum ponto. Restaurar acesso. Mesmo que Juliana seja a responsável por importar, Iremar precisa do acesso (admin pode tudo).'
+    arquivos: [components/Sidebar.tsx, components/BottomNav.tsx]
+
+  - id: P4
+    titulo: 'Layout errors residuais'
+    detalhe: 'Auditar todas as páginas em mobile (375px) e desktop (1440px). Corrigir overflows, gaps, paddings desproporcionais. Foco em /contas, /relatorios, /acerto, /transferencias.'
+
+  - id: P6
+    titulo: 'Acerto Casal + Fechamento para Juliana'
+    detalhe: '/acerto e /mes (Fechamento) só estão acessíveis para admin. Operator também precisa — Juliana paga R$ 1.730 todo mês pelo Iremar, ela precisa ver o saldo do acerto.'
+    arquivos: [app/acerto/page.tsx, app/mes/page.tsx]
+
+  - id: P7
+    titulo: 'Acesso fácil a contas fixas para Iremar'
+    detalhe: 'Compromissos está no menu mas falta destaque/atalho. Considerar: card no dashboard, acesso direto a "vencimentos da semana", etc.'
+
+  - id: P8
+    titulo: 'Editar valor/data ao dar baixa'
+    detalhe: 'Quando user dá baixa em conta fixa, deveria abrir editor inline (valor pago, data pgto, observação) antes de marcar como paid. Valores reais variam dos cadastrados (ex: conta de luz).'
+    arquivos: [app/compromissos/page.tsx, app/compromissos/DarBaixaButton.tsx ou similar]
+
+pipeline:
+  - id: audit_dashboards
+    name: "Auditoria de paridade entre dashboards e rotas"
+    agent: clara_uxops
+    description: >
+      Compara DashboardAdmin com DashboardOperator. Lista o que tem em um e
+      não tem no outro. Mapeia quais features devem ser replicadas.
+      Audita também: Sidebar admin vs nav operator (verificar se /importar
+      está acessível para admin). Verifica se /acerto e /mes têm guard de
+      role=admin que precisa ser removido.
+    outputs:
+      - output/01-audit-paridade.md
+
+  - id: descricao_completa
+    name: "Implementar visualização completa de descrição"
+    agent: tito_dev
+    description: >
+      Resolve P1. Para cada tela que trunca descrição (CategorizarItem,
+      TransactionList, Lancamentos), adiciona forma de ver completa.
+      Padrão sugerido: ao tocar/clicar no item, expande inline ou abre
+      tooltip. Em mobile preferir expand inline (sem hover).
+    inputs:
+      - output/01-audit-paridade.md
+    outputs:
+      - output/02-descricao-completa.md
+
+  - id: paridade_admin_operator
+    name: "Replicar features para Operator + restaurar /importar"
+    agent: tito_dev
+    description: >
+      Resolve P2, P3, P6, P7. Específico:
+      - DashboardOperator ganha gráfico simples (sparkline ou barra), atalhos para /categorizar, /acerto
+      - Sidebar operator (criar se não existir) com itens compatíveis
+      - BottomNav operator: ajustar para incluir Acerto Casal
+      - Sidebar admin: confirmar /importar está lá (já foi adicionado)
+      - Remover guard de admin em /acerto e /mes (operator pode ver versão própria)
+      - Card "Próximos vencimentos" no dashboard admin (P7)
+    inputs:
+      - output/01-audit-paridade.md
+    outputs:
+      - output/03-paridade-implementada.md
+
+  - id: dar_baixa_dialog
+    name: "Editor inline ao dar baixa"
+    agent: tito_dev
+    description: >
+      Resolve P8. Refatora DarBaixaButton (ou similar) para abrir dialog
+      compacto com: valor pago (default = valor cadastrado), data pagamento
+      (default = hoje), observação opcional. Botão "Confirmar" envia o
+      actionDarBaixa com valores customizados.
+    outputs:
+      - output/04-dar-baixa-dialog.md
+
+  - id: layout_polish
+    name: "Polimento final de layout"
+    agent: clara_uxops
+    description: >
+      Resolve P4. Lê páginas críticas e corrige overflow, espaçamento,
+      consistência visual. Foco em mobile 375px e desktop 1440px.
+      Não refatora estrutura — apenas ajuste fino.
+    outputs:
+      - output/05-layout-polish.md

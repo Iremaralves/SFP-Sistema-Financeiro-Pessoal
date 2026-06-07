@@ -1,0 +1,79 @@
+name: i2-integracao-email
+description: >
+  Squad de arquitetura para a captura automática de CSVs que chegam por email
+  (Nubank envia mensalmente para iremar@i2solucoes.com). Mapeia o que já existe,
+  apresenta opções comparadas (custo, complexidade, robustez) e implementa a
+  opção escolhida pelo Iremar.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  email_destino: iremar@i2solucoes.com
+  workspace: 'Google Workspace já em uso'
+  apps_script_existente: /Users/iremaralvesii/Financeiro/apps-script-fatura.js
+  drive_folder_id: '15tcAPDuR_sIQ0HwRg16GqfCgGJp-DJqD'
+  fluxo_atual: |
+    1. Nubank envia CSV para iremar@i2solucoes.com (1x/mês, alguns dias antes do fechamento)
+    2. Apps Script (manual ou trigger?) lê o email + anexo, salva no Drive
+    3. App /importar lista arquivos do Drive (action listDriveFiles)
+    4. Iremar clica em "Importar" no app → CSV é processado
+
+problemas_atuais:
+  - 'O Apps Script é manual? Tem trigger automático?'
+  - 'Como Iremar sabe que tem CSV novo no Drive? Não tem notificação push'
+  - 'E se o Nubank mudar formato do anexo?'
+  - 'Iremar disse "preciso conhecer as opções" → não sabia que isso existia'
+
+pipeline:
+  - id: descoberta
+    name: "Descoberta do estado atual"
+    agent: leo_email
+    description: >
+      Lê o Apps Script existente (apps-script-fatura.js), o action listDriveFiles
+      (apps/web/src/app/importar/actions.ts), e o ImportClient.tsx. Documenta:
+      - O que já está implementado
+      - O que está faltando
+      - Pontos de fragilidade
+      - Variáveis de ambiente necessárias (GOOGLE_SERVICE_ACCOUNT_KEY)
+    outputs:
+      - output/01-estado-atual.md
+
+  - id: opcoes
+    name: "Apresentação de opções com prós/contras"
+    agent: leo_email
+    description: >
+      Apresenta de 4 a 6 opções para captura automática do CSV via email.
+      Para cada opção:
+      - Como funciona em 3 frases
+      - Vantagens e desvantagens objetivas
+      - Custo (R$/mês se houver)
+      - Complexidade de implementação (P/M/G)
+      - Manutenção contínua exigida
+      - Robustez (falha em quais cenários?)
+      - Recomendado para o cenário do Iremar? (sim/talvez/não)
+
+      Opções obrigatórias a cobrir:
+      1. Apps Script com trigger automático (melhorar o atual)
+      2. Gmail API direto no Next.js (OAuth do Iremar)
+      3. Cloudflare Email Workers
+      4. Postmark/Resend Inbound (endereço dedicado)
+      5. IMAP polling no backend
+      6. Manter manual (botão "Verificar email agora" no app)
+    inputs:
+      - output/01-estado-atual.md
+    outputs:
+      - output/02-opcoes.md
+
+  - id: recomendacao
+    name: "Recomendação final"
+    agent: leo_email
+    description: >
+      Compara as opções via matriz "Esforço × Robustez × Custo" e indica a
+      melhor para o Iremar (dev solo, microempresa, Google Workspace já em uso).
+      Inclui plano de implementação detalhado da recomendada.
+    inputs:
+      - output/02-opcoes.md
+    outputs:
+      - output/03-recomendacao.md

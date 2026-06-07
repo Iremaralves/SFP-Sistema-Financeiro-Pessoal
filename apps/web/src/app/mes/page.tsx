@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { getEffectiveScope } from '@/lib/profile-scope';
 import { toTransactions } from '@/lib/mappers';
 import { calculateSettlement } from '@i2fin/core';
 import { BottomNav } from '@/components/BottomNav';
@@ -23,7 +24,7 @@ export default async function MesPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
-  if (profile.role !== 'admin') redirect('/dashboard');
+  // operator também pode ver — Juliana acompanha o fechamento mensal
 
   const month = new Date().toISOString().slice(0, 7);
   const [my, mm] = month.split('-').map(Number);
@@ -50,25 +51,31 @@ export default async function MesPage() {
   const julianaTransf = (incomeRows ?? []).filter((r) => r.kind === 'juliana_transfer').reduce((s, r) => s + r.amount, 0);
   const unassigned = transactions.filter((t) => t.responsible === 'unassigned').length;
 
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
+
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-28 md:pl-60">
       {/* Header */}
-      <div className="relative px-5 pt-14 pb-6 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="relative px-5 md:px-8 pt-14 md:pt-8 pb-6 overflow-hidden page-container" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.14) 0%, transparent 70%)' }} />
         <p className="text-white/40 text-xs uppercase tracking-widest capitalize mb-1">{monthLabel}</p>
         <h1 className="text-2xl font-bold text-white">Fechamento do mês</h1>
       </div>
 
-      <div className="px-4 py-4 space-y-3">
+      <div className="px-4 md:px-8 py-4 space-y-3 page-container">
 
         {/* Unassigned alert */}
         {unassigned > 0 && (
-          <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+          <a href="/categorizar" className="rounded-2xl p-4 flex items-center gap-3 transition-all active:scale-[0.98]"
+            style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
             <span className="text-xl">⚠️</span>
-            <p className="text-amber-300 text-sm font-medium">
-              {unassigned} lançamento(s) sem responsável — use o CLI para categorizar.
-            </p>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-300 text-sm font-medium">{unassigned} lançamento(s) sem responsável</p>
+              <p className="text-amber-400/60 text-xs mt-0.5">Toque para categorizar →</p>
+            </div>
+            <span className="text-amber-300 text-base flex-shrink-0">›</span>
+          </a>
         )}
 
         {/* A) Divisão da fatura */}
@@ -126,7 +133,7 @@ export default async function MesPage() {
         </Section>
       </div>
 
-      <BottomNav role={profile.role as 'admin' | 'operator'} />
+      <BottomNav role={profile.role as 'admin' | 'operator'} name={profile.name ?? ''} scope={scope} />
     </div>
   );
 }

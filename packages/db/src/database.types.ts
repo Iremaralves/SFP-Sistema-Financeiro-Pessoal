@@ -26,9 +26,9 @@ export type Database = {
         Relationships: [];
       };
       accounts: {
-        Row: { id: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance: number; active: boolean; created_at: string; entity_id: string | null };
-        Insert: { id?: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company'; opening_balance?: number; active?: boolean; entity_id?: string | null };
-        Update: { name?: string; kind?: 'credit_card' | 'checking' | 'company'; active?: boolean; entity_id?: string | null };
+        Row: { id: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company' | 'investment'; brand?: string | null; opening_balance: number; active: boolean; created_at: string; entity_id: string | null };
+        Insert: { id?: string; household_id: string; name: string; kind: 'credit_card' | 'checking' | 'company' | 'investment'; brand?: string | null; opening_balance?: number; active?: boolean; entity_id?: string | null };
+        Update: { name?: string; kind?: 'credit_card' | 'checking' | 'company' | 'investment'; brand?: string | null; active?: boolean; entity_id?: string | null };
         Relationships: [];
       };
       categories: {
@@ -44,21 +44,27 @@ export type Database = {
         Relationships: [];
       };
       transactions: {
-        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null; installment_current: number | null; installment_total: number | null; entity_id: string | null };
-        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null };
-        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null };
+        Row: { id: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible: string; category_id: string | null; status: string; source: string; csv_import_id: string | null; fingerprint: string; notes: string | null; created_at: string; updated_at: string; created_by: string | null; installment_current: number | null; installment_total: number | null; entity_id: string | null; is_transfer: boolean; transfer_id: string | null };
+        Insert: { id?: string; household_id: string; account_id: string; occurred_on: string; description: string; amount: number; responsible?: string; category_id?: string | null; status?: string; source: string; csv_import_id?: string | null; fingerprint: string; notes?: string | null; created_by?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null; is_transfer?: boolean; transfer_id?: string | null };
+        Update: { responsible?: string; category_id?: string | null; status?: string; notes?: string | null; installment_current?: number | null; installment_total?: number | null; entity_id?: string | null; is_transfer?: boolean; transfer_id?: string | null };
         Relationships: [];
       };
       recurring_commitments: {
-        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; account_id: string | null; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null; payment_method: 'credit_card' | 'boleto' | 'pix'; recurrence_type: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id: string | null };
-        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; account_id?: string | null; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null };
-        Update: { amount?: number; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null; description?: string; due_day?: number; responsible?: string; account_id?: string | null };
+        Row: { id: string; household_id: string; description: string; amount: number; responsible: string; paid_by: 'iremar' | 'juliana' | 'casal' | 'i2'; account_id: string | null; due_day: number; category_id: string | null; variable: boolean; active: boolean; notes: string | null; payment_method: 'credit_card' | 'boleto' | 'pix'; recurrence_type: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id: string | null };
+        Insert: { id?: string; household_id: string; description: string; amount: number; responsible: string; paid_by: 'iremar' | 'juliana' | 'casal' | 'i2'; account_id?: string | null; due_day: number; category_id?: string | null; variable?: boolean; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null };
+        Update: { amount?: number; active?: boolean; notes?: string | null; payment_method?: 'credit_card' | 'boleto' | 'pix'; recurrence_type?: 'monthly' | 'weekly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'; entity_id?: string | null; description?: string; due_day?: number; responsible?: string; paid_by?: 'iremar' | 'juliana' | 'casal' | 'i2'; account_id?: string | null };
         Relationships: [];
       };
       monthly_obligations: {
-        Row: { id: string; household_id: string; recurring_id: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status: string; paid_on: string | null; paid_amount: number | null };
-        Insert: { id?: string; household_id: string; recurring_id?: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; status?: string; paid_on?: string | null; paid_amount?: number | null };
-        Update: { status?: string; paid_on?: string | null; paid_amount?: number | null; amount?: number };
+        Row: { id: string; household_id: string; recurring_id: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; paid_by: 'iremar' | 'juliana' | 'casal' | 'i2' | null; status: string; paid_on: string | null; paid_amount: number | null };
+        Insert: { id?: string; household_id: string; recurring_id?: string | null; reference_month: string; due_date: string; description: string; amount: number; responsible: string; paid_by?: 'iremar' | 'juliana' | 'casal' | 'i2' | null; status?: string; paid_on?: string | null; paid_amount?: number | null };
+        Update: { status?: string; paid_on?: string | null; paid_amount?: number | null; amount?: number; paid_by?: 'iremar' | 'juliana' | 'casal' | 'i2' | null };
+        Relationships: [];
+      };
+      transfers: {
+        Row: { id: string; household_id: string; from_account_id: string; to_account_id: string; amount: number; occurred_on: string; description: string | null; from_transaction_id: string | null; to_transaction_id: string | null; created_by: string | null; created_at: string };
+        Insert: { id?: string; household_id: string; from_account_id: string; to_account_id: string; amount: number; occurred_on: string; description?: string | null; from_transaction_id?: string | null; to_transaction_id?: string | null; created_by?: string | null };
+        Update: { amount?: number; occurred_on?: string; description?: string | null; from_transaction_id?: string | null; to_transaction_id?: string | null };
         Relationships: [];
       };
       categorization_rules: {
@@ -128,6 +134,12 @@ export type Database = {
           notes?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      transaction_attachments: {
+        Row: { id: string; household_id: string; transaction_id: string; file_name: string; file_path: string; file_url: string | null; mime_type: string | null; size_bytes: number | null; kind: string | null; notes: string | null; uploaded_by: string | null; created_at: string };
+        Insert: { id?: string; household_id: string; transaction_id: string; file_name: string; file_path: string; file_url?: string | null; mime_type?: string | null; size_bytes?: number | null; kind?: string | null; notes?: string | null; uploaded_by?: string | null };
+        Update: { file_name?: string; kind?: string | null; notes?: string | null; file_url?: string | null };
         Relationships: [];
       };
     };

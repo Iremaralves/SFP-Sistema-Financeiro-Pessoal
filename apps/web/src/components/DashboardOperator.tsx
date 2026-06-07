@@ -8,6 +8,15 @@ import { LogoutButton } from './LogoutButton';
 import { BillsCard, type Bill } from './BillsCard';
 import Link from 'next/link';
 import type { ProfileScope } from '@/lib/profile-scope';
+import { QuickActions } from './QuickActions';
+
+interface DashboardMetrics {
+  faturaTotal: number;
+  aPagarTotal: number;
+  aPagarCount: number;
+  aReceberTotal: number;
+  saldoContas: number;
+}
 
 interface Props {
   profile: { name: string; role: string; household_id: string };
@@ -15,6 +24,7 @@ interface Props {
   month: string;
   bills?: Bill[];
   scope?: ProfileScope;
+  metrics?: DashboardMetrics;
 }
 
 function fmt(n: number) {
@@ -28,7 +38,7 @@ const glass = {
   border: '1px solid rgba(255,255,255,0.08)',
 } as React.CSSProperties;
 
-export function DashboardOperator({ profile, transactions, month, bills = [], scope = 'pessoal' }: Props) {
+export function DashboardOperator({ profile, transactions, month, bills = [], scope = 'pessoal', metrics }: Props) {
   const settlement = calculateInvoiceSettlement(transactions, month);
   const [lbl_y, lbl_m] = month.split('-').map(Number);
   const monthLabel = new Date(lbl_y, lbl_m - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -59,6 +69,18 @@ export function DashboardOperator({ profile, transactions, month, bills = [], sc
       </div>
 
       <div className="px-4 md:px-8 pb-28 md:pb-12 space-y-3 page-container fade-up-stagger">
+
+        {/* Ações rápidas */}
+        {metrics && (
+          <QuickActions
+            scope={scope}
+            faturaTotal={metrics.faturaTotal}
+            aPagarCount={metrics.aPagarCount}
+            aPagarTotal={metrics.aPagarTotal}
+            aReceberTotal={metrics.aReceberTotal}
+            saldoContas={metrics.saldoContas}
+          />
+        )}
 
         {/* Alerta sem responsável — CTA principal pra Juliana */}
         {unassigned > 0 && (

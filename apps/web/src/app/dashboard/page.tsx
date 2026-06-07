@@ -117,6 +117,47 @@ export default async function DashboardPage() {
 
   const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
 
+  // ─── Métricas para Quick Actions (atalhos rápidos no topo) ─────────────────
+  // Total a pagar pendente (sum amount dos bills pendentes do mês)
+  const aPagarTotal = bills.reduce((sum, b) => sum + b.amount, 0);
+  const aPagarCount = bills.length;
+
+  // Total a receber do mês (income_records: pro-labore + juliana_transfer + outros)
+  const aReceberTotal = (incomeRecords ?? []).reduce((s, r) => s + Number(r.amount), 0);
+
+  // Saldo total das contas (positivos). Filtra por escopo.
+  const { data: allTxForSaldo } = await supabase
+    .from('transactions').select('account_id, amount')
+    .eq('household_id', profile.household_id);
+  const { data: scopedAccounts } = await supabase
+    .from('accounts').select('id, kind, opening_balance')
+    .eq('household_id', profile.household_id)
+    .eq('active', true);
+  const acctTx = new Map<string, number>();
+  for (const t of (allTxForSaldo ?? [])) {
+    acctTx.set(t.account_id, (acctTx.get(t.account_id) ?? 0) + Number(t.amount));
+  }
+  const filteredAccts = (scopedAccounts ?? []).filter(a => {
+    if (scope === 'pessoal') return a.kind !== 'company' && a.kind !== 'credit_card';
+    if (scope === 'empresa') return a.kind === 'company';
+    return a.kind !== 'credit_card'; // tudo: exclui cartão (saldo negativo)
+  });
+  const saldoContas = filteredAccts.reduce(
+    (s, a) => s + Number(a.opening_balance) + (acctTx.get(a.id) ?? 0),
+    0,
+  );
+
+  // Total da fatura aberta (para badge do atalho 💳 Cartão)
+  const faturaTotal = mappedTx.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+
+  const dashboardMetrics = {
+    faturaTotal,
+    aPagarTotal,
+    aPagarCount,
+    aReceberTotal,
+    saldoContas,
+  };
+
   return (
     <div className="min-h-screen pb-24 md:pl-60">
       {profile.role === 'admin' ? (
@@ -129,6 +170,7 @@ export default async function DashboardPage() {
           upcoming={upcoming}
           bills={bills}
           scope={scope}
+          metrics={dashboardMetrics}
         />
       ) : (
         <DashboardOperator
@@ -137,6 +179,7 @@ export default async function DashboardPage() {
           month={cycle.referenceMonth}
           bills={bills.filter(b => b.paid_by === 'juliana' || b.responsible === 'juliana' || b.responsible === 'casal')}
           scope={scope}
+          metrics={dashboardMetrics}
         />
       )}
     </div>

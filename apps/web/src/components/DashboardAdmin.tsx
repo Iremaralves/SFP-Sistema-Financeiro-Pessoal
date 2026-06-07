@@ -9,7 +9,16 @@ import { LogoutButton } from './LogoutButton';
 import { DonutSplit } from './charts/DonutSplit';
 import { Sparkline } from './charts/Sparkline';
 import { BillsCard, type Bill } from './BillsCard';
+import { QuickActions } from './QuickActions';
 import type { ProfileScope } from '@/lib/profile-scope';
+
+interface DashboardMetrics {
+  faturaTotal: number;
+  aPagarTotal: number;
+  aPagarCount: number;
+  aReceberTotal: number;
+  saldoContas: number;
+}
 
 interface UpcomingItem {
   id: string;
@@ -28,6 +37,7 @@ interface Props {
   upcoming?: UpcomingItem[];
   bills?: Bill[];
   scope?: ProfileScope;
+  metrics?: DashboardMetrics;
 }
 
 function fmt(n: number) {
@@ -47,7 +57,7 @@ function fmtCycleLabel(start: string, end: string): string {
   return `${sd}/${sm} → ${ed}/${em}`;
 }
 
-export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo' }: Props) {
+export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics }: Props) {
   const settlement = calculateInvoiceSettlement(transactions, month);
 
   const proLabore = incomeRecords.filter((r) => r.kind === 'pro_labore').reduce((s, r) => s + r.amount, 0);
@@ -91,6 +101,18 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
       </div>
 
       <div className="px-4 md:px-8 pb-28 md:pb-12 space-y-3 page-container fade-up-stagger">
+
+        {/* Ações rápidas — atalhos pra o que Iremar mais usa */}
+        {metrics && (
+          <QuickActions
+            scope={scope}
+            faturaTotal={metrics.faturaTotal}
+            aPagarCount={metrics.aPagarCount}
+            aPagarTotal={metrics.aPagarTotal}
+            aReceberTotal={metrics.aReceberTotal}
+            saldoContas={metrics.saldoContas}
+          />
+        )}
 
         {/* Alerta sem responsável */}
         {unassigned > 0 && (

@@ -3,8 +3,9 @@ import { Suspense } from 'react';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { getEffectiveScope } from '@/lib/profile-scope';
 import { BottomNav } from '@/components/BottomNav';
-import { DarBaixaButton } from './DarBaixaButton';
+import { CompromissoRow } from '@/components/CompromissoRow';
 import { FiltroMes } from './FiltroMes';
+import { FiltrosCollapse } from './FiltrosCollapse';
 import Link from 'next/link';
 
 function fmt(n: number) {
@@ -258,70 +259,32 @@ export default async function CompromissosPage({
           <FiltroMes meses={meses} mesSelecionado={mes} />
         </Suspense>
 
-        {/* Filtro de entidade */}
-        <div className="flex gap-2 mt-3">
-          {tabs.map(tab => {
-            const isActive = entidadeFiltro === tab.id;
+        {/* Linha de filtros: Status (visível) + botão "Filtros" (entidade + ordenação) */}
+        <div className="flex gap-1.5 mt-3 items-center flex-wrap">
+          {STATUS_FILTERS.map(sf => {
+            const isActive = statusFiltro === sf.id;
             return (
               <Link
-                key={tab.id}
-                href={buildHref({ entidade: tab.id })}
-                className="flex-1 py-1.5 rounded-xl text-center text-xs font-semibold transition-all"
+                key={sf.id}
+                href={buildHref({ status: sf.id })}
+                className="px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
                 style={{
-                  background: isActive ? `${tab.color}20` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${isActive ? tab.color + '50' : 'rgba(255,255,255,0.08)'}`,
-                  color: isActive ? tab.color : 'rgba(255,255,255,0.35)',
+                  background: isActive ? `${sf.color}22` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isActive ? sf.color + '55' : 'rgba(255,255,255,0.08)'}`,
+                  color: isActive ? sf.color : 'rgba(255,255,255,0.4)',
                 }}
               >
-                {tab.label}
+                {sf.label}
               </Link>
             );
           })}
-        </div>
-
-        {/* Filtros de status + ordenação */}
-        <div className="flex flex-col sm:flex-row gap-2 mt-3">
-          {/* Status pills */}
-          <div className="flex gap-1.5 flex-1 overflow-x-auto hide-scrollbar">
-            {STATUS_FILTERS.map(sf => {
-              const isActive = statusFiltro === sf.id;
-              return (
-                <Link
-                  key={sf.id}
-                  href={buildHref({ status: sf.id })}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
-                  style={{
-                    background: isActive ? `${sf.color}22` : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isActive ? sf.color + '55' : 'rgba(255,255,255,0.08)'}`,
-                    color: isActive ? sf.color : 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  {sf.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Ordenação pills */}
-          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar flex-shrink-0">
-            {ORDEM_OPCOES.map(o => {
-              const isActive = ordem === o.id;
-              return (
-                <Link
-                  key={o.id}
-                  href={buildHref({ ordem: o.id })}
-                  className="px-2.5 py-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap flex-shrink-0 transition-all"
-                  style={{
-                    background: isActive ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isActive ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                    color: isActive ? '#a5b4fc' : 'rgba(255,255,255,0.35)',
-                  }}
-                >
-                  {o.label}
-                </Link>
-              );
-            })}
-          </div>
+          <FiltrosCollapse
+            entidadeFiltro={entidadeFiltro}
+            ordem={ordem}
+            tabs={tabs}
+            ordemOpcoes={ORDEM_OPCOES.map(o => ({ id: o.id, label: o.label }))}
+            buildHref={buildHref}
+          />
         </div>
       </div>
 
@@ -349,72 +312,23 @@ export default async function CompromissosPage({
             </div>
           ) : (
             <div className="space-y-2">
-              {boletoPixRows.map(({ commitment: c, status, isPaid, entity }) => {
-                const cfg = STATUS_CONFIG[status];
-                const recLabel = RECURRENCE_LABEL[c.recurrence_type ?? 'monthly'] ?? 'Mensal';
-                const pmIcon = PAYMENT_ICON[c.payment_method ?? 'boleto'];
-                const isI2 = entity?.type === 'business';
-
-                return (
-                  <div
-                    key={c.id}
-                    className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${status === 'overdue' && !isPaid ? 'rgba(239,68,68,0.2)' : isI2 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}`,
-                    }}
-                  >
-                    {/* Dia badge */}
-                    <div className="flex-shrink-0 w-10 h-10 rounded-xl flex flex-col items-center justify-center" style={{ background: cfg.bg }}>
-                      <span className="text-[9px] font-bold leading-none" style={{ color: cfg.color }}>dia</span>
-                      <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
-                    </div>
-
-                    {/* Info */}
-                    <Link href={`/compromissos/${c.id}`} className="flex-1 min-w-0 active:opacity-70">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">{c.description}</p>
-                        {isI2 && (
-                          <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                            i2
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px]">{cfg.icon}</span>
-                        <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
-                        <span className="text-[10px] text-white/20">·</span>
-                        <span className="text-[10px] text-white/35">{pmIcon} {recLabel}</span>
-                        {c.paid_by && c.paid_by !== c.responsible && (
-                          <>
-                            <span className="text-[10px] text-white/20">·</span>
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                              style={{
-                                background: c.paid_by === 'juliana' ? 'rgba(236,72,153,0.12)' : 'rgba(99,102,241,0.12)',
-                                color:      c.paid_by === 'juliana' ? '#f472b6' : '#a5b4fc',
-                              }}>
-                              paga: {c.paid_by === 'juliana' ? 'Juliana' : c.paid_by === 'iremar' ? 'Iremar' : c.paid_by}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </Link>
-
-                    {/* Valor + ação */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm font-semibold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {fmt(Number(c.amount))}
-                      </span>
-                      <DarBaixaButton
-                        recurringId={c.id}
-                        amount={Number(c.amount)}
-                        referenceMonth={mes}
-                        initialPaid={isPaid}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              {boletoPixRows.map(({ commitment: c, status, isPaid, entity }) => (
+                <CompromissoRow
+                  key={c.id}
+                  commitmentId={c.id}
+                  description={c.description}
+                  dueDay={c.due_day}
+                  amount={Number(c.amount)}
+                  paymentMethod={c.payment_method}
+                  recurrenceType={c.recurrence_type}
+                  responsible={c.responsible}
+                  paidBy={c.paid_by}
+                  status={status as 'overdue' | 'today' | 'upcoming' | 'paid'}
+                  isPaid={isPaid}
+                  entity={entity ?? null}
+                  referenceMonth={mes}
+                />
+              ))}
             </div>
           )}
         </section>
@@ -427,50 +341,24 @@ export default async function CompromissosPage({
               <p className="text-[10px] text-indigo-400/60">Toque para editar tipo</p>
             </div>
             <div className="space-y-2">
-              {creditRows.map(({ commitment: c, status, entity }) => {
-                const cfg = STATUS_CONFIG[status];
-                const isI2 = entity?.type === 'business';
-                return (
-                  <Link
-                    key={c.id}
-                    href={`/compromissos/${c.id}`}
-                    className="rounded-2xl px-4 py-3.5 flex items-center gap-3 transition-all active:scale-[0.98]"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isI2 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}`,
-                    }}
-                  >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-xl flex flex-col items-center justify-center" style={{ background: cfg.bg }}>
-                      <span className="text-[9px] font-bold leading-none" style={{ color: cfg.color }}>dia</span>
-                      <span className="text-base font-bold leading-none" style={{ color: cfg.color }}>{c.due_day}</span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <p className="text-white/80 text-sm font-medium truncate">{c.description}</p>
-                        {isI2 && (
-                          <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                            i2
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px]">{cfg.icon}</span>
-                        <span className="text-[10px]" style={{ color: cfg.color }}>{cfg.label}</span>
-                        <span className="text-[10px] text-white/20">·</span>
-                        <span className="text-[10px] text-white/30">💳 {RECURRENCE_LABEL[c.recurrence_type ?? 'monthly']}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm font-semibold text-white/60" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {fmt(Number(c.amount))}
-                      </span>
-                      <span className="text-[10px] text-white/20">✎</span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {creditRows.map(({ commitment: c, status, isPaid, entity }) => (
+                <CompromissoRow
+                  key={c.id}
+                  commitmentId={c.id}
+                  description={c.description}
+                  dueDay={c.due_day}
+                  amount={Number(c.amount)}
+                  paymentMethod={c.payment_method}
+                  recurrenceType={c.recurrence_type}
+                  responsible={c.responsible}
+                  paidBy={c.paid_by}
+                  status={status as 'overdue' | 'today' | 'upcoming' | 'paid'}
+                  isPaid={isPaid}
+                  entity={entity ?? null}
+                  referenceMonth={mes}
+                  isCreditCard
+                />
+              ))}
             </div>
             <p className="text-white/18 text-[10px] text-center px-2 mt-1">
               Toque em qualquer conta para editar — mude para Boleto/PIX se necessário

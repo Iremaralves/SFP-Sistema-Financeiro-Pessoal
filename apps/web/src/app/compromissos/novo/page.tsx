@@ -37,6 +37,23 @@ export default function NovoCompromissoPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('boleto');
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('monthly');
 
+  // Proração do 1º mês (ex: estagiária que entrou no meio do mês)
+  const [prorate, setProrate] = useState(false);
+  const [startDate, setStartDate] = useState('');
+
+  // Cálculo da proração (dias corridos do mês de início)
+  const fullValue = parseFloat(amount.replace(',', '.'));
+  const proration = (() => {
+    if (!prorate || !startDate || Number.isNaN(fullValue)) return null;
+    const [y, m, d] = startDate.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const diasMes = new Date(y, m, 0).getDate();           // dias do mês de início
+    const diasTrabalhados = Math.max(0, diasMes - d + 1);  // do dia de início até o fim
+    const valor = Math.round((fullValue * diasTrabalhados / diasMes) * 100) / 100;
+    const mesLabel = new Date(y, m - 1, 1).toLocaleString('pt-BR', { month: 'long' });
+    return { diasMes, diasTrabalhados, valor, mesLabel, refMonth: `${y}-${String(m).padStart(2, '0')}` };
+  })();
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -68,7 +85,8 @@ export default function NovoCompromissoPage() {
     const famEntity = entityRows?.find(e => e.type === 'personal');
     const entityId  = responsible === 'i2' ? (i2Entity?.id ?? null) : (famEntity?.id ?? null);
 
-    await db.from('recurring_commitments').insert({
+    // Compromisso sempre cadastrado com o valor CHEIO (estado permanente)
+    const { data: novoCommit } = await db.from('recurring_commitments').insert({
       household_id: profile.household_id,
       account_id: accountId,
       description,
@@ -80,7 +98,23 @@ export default function NovoCompromissoPage() {
       payment_method: paymentMethod,
       recurrence_type: recurrenceType,
       entity_id: entityId,
-    });
+    }).select('id').single();
+
+    // Se prorar: cria a obrigação do 1º mês com o valor proporcional (pending).
+    // Os meses seguintes usam o valor cheio automaticamente.
+    if (prorate && proration && novoCommit) {
+      await db.from('monthly_obligations').insert({
+        household_id: profile.household_id,
+        recurring_id: novoCommit.id,
+        reference_month: `${proration.refMonth}-01`,
+        due_date: `${proration.refMonth}-${String(parseInt(dueDay)).padStart(2, '0')}`,
+        description: `${description} (proporcional ${proration.diasTrabalhados}/${proration.diasMes} dias)`,
+        amount: proration.valor,
+        responsible,
+        status: 'pending',
+      });
+    }
+
     router.push('/compromissos');
   }
 
@@ -136,7 +170,9 @@ export default function NovoCompromissoPage() {
 
         {/* Valor */}
         <div>
-          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">Valor (R$)</label>
+          <label className="block text-white/40 text-xs uppercase tracking-wider mb-2">
+            {prorate ? 'Valor cheio (mês completo)' : 'Valor (R$)'}
+          </label>
           <input
             type="number" step="0.01" min="0.01" value={amount}
             onChange={e => setAmount(e.target.value)}
@@ -144,6 +180,48 @@ export default function NovoCompromissoPage() {
             className="w-full rounded-xl px-4 py-3.5 text-white placeholder-white/25 text-2xl font-bold focus:outline-none"
             style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
           />
+        </div>
+
+        {/* Proração do 1º mês */}
+        <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            type="button"
+            onClick={() => setProrate(v => !v)}
+            className="w-full flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2 text-sm">
+              <span>📅</span>
+              <span style={{ color: prorate ? '#34d399' : 'rgba(255,255,255,0.5)' }}>
+                Proporcional no 1º mês (entrou no meio do mês)
+              </span>
+            </span>
+            <span className="w-9 h-5 rounded-full transition-all flex items-center flex-shrink-0"
+              style={{ background: prorate ? '#34d399' : 'rgba(255,255,255,0.15)' }}>
+              <span className="w-4 h-4 rounded-full bg-white transition-all"
+                style={{ marginLeft: prorate ? '18px' : '2px' }} />
+            </span>
+          </button>
+
+          {prorate && (
+            <div className="mt-3 space-y-2">
+              <label className="block text-white/40 text-[10px] uppercase tracking-wider">Data de início</label>
+              <input
+                type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none"
+                style={{ ...inputStyle, colorScheme: 'dark' }}
+              />
+              {proration && (
+                <div className="rounded-lg p-2.5 mt-1" style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  <p className="text-emerald-300 text-sm font-bold tabular">
+                    1º mês ({proration.mesLabel}): {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(proration.valor)}
+                  </p>
+                  <p className="text-emerald-400/60 text-[11px] mt-0.5">
+                    {fullValue ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fullValue) : '—'} × {proration.diasTrabalhados} de {proration.diasMes} dias · demais meses no valor cheio
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Dia de vencimento + Recorrência */}

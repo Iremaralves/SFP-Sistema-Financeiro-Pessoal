@@ -1,0 +1,160 @@
+name: i2-gestao-decisoria
+description: >
+  Squad sênior de controladoria + produto + dados para transformar o i2 Finance
+  de "registro do passado" em "ferramenta de decisão do presente e futuro".
+  Resolve as necessidades reais de gestão: contas a pagar/receber com horizonte
+  temporal (hoje/semana/mês), planejamento de caixa empresarial (quanto tirar do
+  cofre pra honrar a folha), pagamentos variáveis e proporcionais (estágio que
+  começou no meio do mês), cadastro de receitas de novos projetos, e orçamento
+  pessoal com semáforo de "posso gastar?". Modela dados novos, desenha telas de
+  decisão e entrega plano de implementação em ondas que não quebram produção.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  prod_url: https://i2-finance.vercel.app
+
+  schema_atual:
+    entities:
+      - 'Família (personal)'
+      - 'i2 Soluções Digitais (business)'
+    accounts:
+      - 'Cartão Nubank (credit_card)'
+      - 'Nubank PF (checking)'
+      - 'Nubank Juliana (checking)'
+      - 'Inter PJ (company)'
+      - 'Caixinha Nubank (investment) — usado como cofre'
+      - 'NuInvest (investment)'
+    recurring_commitments:
+      colunas: 'description, amount, due_day, payment_method(enum), recurrence_type(enum), responsible, paid_by, entity_id, account_id, variable(bool), active'
+      i2_atuais:
+        - 'Pró-labore Iremar — R$ 5.000 — dia 5 — pix'
+        - 'Retirada de lucros — R$ 3.000 — dia 5 — pix'
+        - 'DAS Simples Nacional — R$ 2.600,21 — dia 20 — boleto'
+        - 'INSS — R$ 550 — dia 20 — boleto'
+    income_records:
+      colunas: 'occurred_on, description, amount, kind, reference_month, entity_id'
+      uso_atual: 'só receitas PF (pro_labore, juliana_transfer) — NÃO há receita de projeto da i2'
+    monthly_obligations:
+      colunas: 'recurring_id, reference_month, due_date, description, amount, responsible, status, paid_on, paid_amount, paid_by'
+      uso: 'materializa o status mensal de cada compromisso (pago/pendente)'
+    transactions: 'lançamentos do cartão (CSV) + manuais'
+
+  lacunas_identificadas:
+    - 'NÃO existe contas a receber da empresa (projetos/clientes + data prevista)'
+    - 'NÃO existe pagamento variável tipo folha (Pedro, Alana, Eduarda, Mayana, contadora)'
+    - 'NÃO existe proração (item proporcional a dias trabalhados no mês)'
+    - 'NÃO existe planejador de caixa / cálculo de quanto tirar do cofre'
+    - 'NÃO existe orçamento pessoal / semáforo posso-gastar'
+    - 'NÃO existe visão temporal "essa semana" (só "esse mês")'
+    - 'NÃO existe cadastro de receita de projeto novo'
+
+  necessidades_pessoal:
+    - 'Quais contas ainda vou pagar (num olhar)'
+    - 'Quais contas vencem essa semana'
+    - 'Quais valores vou receber'
+    - 'Ainda posso usar o cartão? Como está meu orçamento?'
+    - 'Como está a fatura do cartão? A divisão? Minha parte? Como afeta meu orçamento mensal?'
+
+  necessidades_empresa:
+    - 'Quais contas vou receber e quando (projetos/clientes)'
+    - 'Quais contas vou pagar e quando'
+    - >
+      Quanto preciso tirar do cofre/investimento para os pagamentos do dia/semana.
+      Cenário real do Iremar: hoje pagar R$ 1.200 Pedro, R$ 550 Alana,
+      Eduarda (bolsa estágio proporcional — começou 11/05, não será os R$ 500 cheios),
+      R$ 750 Mayana, R$ 3.000 Iremar, R$ 500 contadora. Quer o TOTAL no app
+      pra saber quanto precisa ter na conta.
+    - 'Cadastrar novas entradas de projetos novos (hoje não vê nada disso)'
+
+  usuarios:
+    iremar: 'admin — dono i2, gestor PF+PJ, decide pagamentos toda semana'
+    juliana: 'operator — só PF mobile'
+
+deliverables:
+  primary:
+    - Mapa de necessidades → perguntas de decisão → dados necessários
+    - Modelo financeiro empresarial (AR/AP, folha variável, proração, planejador de cofre)
+    - Modelo de orçamento pessoal (budget + semáforo posso-gastar + impacto fatura)
+    - Arquitetura de dados (migrations propostas: contas_a_receber, pagamentos_variaveis/folha, orcamentos, projetos)
+    - Specs do dashboard Pessoal (at-a-glance decisório)
+    - Specs do dashboard Empresa (at-a-glance + planejador de pagamentos da semana)
+    - Plano de implementação em ondas
+    - Validação brutal contra a realidade do Iremar
+
+  forbidden:
+    - 'Quebrar produção ou dados existentes'
+    - 'Misturar caixa PF com PJ (quebra Fator R / contabilidade)'
+    - 'Propor schema sem migration reversível'
+    - 'Inventar telas sem ligação com uma decisão real do usuário'
+
+pipeline:
+  - id: needs_map
+    name: "Fase 1 — Mapa de Necessidades → Decisões"
+    agent: rui_produto
+    description: >
+      Traduz cada necessidade crua (pessoal + empresa) em: (a) pergunta de
+      decisão que o Iremar faz, (b) dado(s) necessário(s) pra responder,
+      (c) existe hoje? sim/parcial/não, (d) tela onde deveria aparecer.
+
+  - id: modelo_empresa
+    name: "Fase 2 — Modelo Financeiro Empresarial"
+    agent: beatriz_controladoria
+    description: >
+      Desenha o modelo de gestão de caixa da i2: contas a receber (projetos),
+      contas a pagar (fixas + variáveis/folha), proração de itens parciais,
+      e o PLANEJADOR DE COFRE (dado o que vence hoje/semana, quanto tirar do
+      investimento). Usa o cenário real do Iremar como caso de teste.
+
+  - id: modelo_pessoal
+    name: "Fase 3 — Modelo de Orçamento Pessoal"
+    agent: camila_pessoal
+    description: >
+      Desenha orçamento familiar: teto mensal, gasto corrente, semáforo
+      "posso usar o cartão?", e como a parte do Iremar na fatura impacta o
+      orçamento do mês. Visão "essa semana" de contas a pagar/receber PF.
+
+  - id: data_arch
+    name: "Fase 4 — Arquitetura de Dados"
+    agent: henrique_dados
+    description: >
+      Propõe migrations (SQL reversível) pras lacunas: contas_a_receber,
+      pagamentos variáveis/folha (com proração), orçamentos. Define como se
+      ligam ao schema atual (entities, accounts, monthly_obligations) sem
+      quebrar nada. Inclui RLS e índices.
+
+  - id: ux_pessoal
+    name: "Fase 5 — Dashboard Pessoal Decisório"
+    agent: lia_ux
+    description: >
+      Especifica a tela pessoal pra responder as 5 necessidades num olhar:
+      a pagar, vence-essa-semana, a receber, semáforo do cartão/orçamento,
+      divisão da fatura e impacto. Mobile-first.
+
+  - id: ux_empresa
+    name: "Fase 6 — Dashboard Empresa + Planejador de Pagamentos"
+    agent: lia_ux
+    description: >
+      Especifica a tela empresa: a receber (timeline), a pagar (timeline),
+      e o PLANEJADOR DA SEMANA com o total a desembolsar + quanto tirar do
+      cofre. Tela de cadastro de receita de projeto novo. Tela de folha
+      variável com proração.
+
+  - id: plano
+    name: "Fase 7 — Plano de Implementação em Ondas"
+    agent: diego_dev
+    description: >
+      Quebra tudo em ondas: dados (migrations) → telas empresa (maior dor) →
+      telas pessoal → polish. Cada onda com rollback e validação. Prioriza o
+      planejador de pagamentos da empresa (dor #1 do Iremar).
+
+  - id: validacao
+    name: "Fase 8 — Validação Brutal"
+    agent: iremar_validator
+    description: >
+      Lê tudo e responde: isso resolve minha dor real? O que é essencial vs
+      perfumaria? Qual o escopo mínimo que me deixa fazer a folha da semana
+      sem planilha? Riscos reais.

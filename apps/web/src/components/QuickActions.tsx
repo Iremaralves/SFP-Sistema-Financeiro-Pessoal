@@ -52,9 +52,9 @@ export function QuickActions({
           border: 'rgba(245,158,11,0.3)',
         },
         {
-          href: '/compromissos',
-          icon: '📅',
-          label: 'A pagar',
+          href: '/empresa/pagamentos',
+          icon: '💸',
+          label: 'Pagar / Cofre',
           badge: aPagarCount ? `${aPagarCount} · ${fmt(aPagarTotal)}` : 'OK',
           badgeColor: aPagarCount > 0 ? '#fbbf24' : '#34d399',
           gradient: 'linear-gradient(135deg, rgba(251,191,36,0.18), rgba(251,191,36,0.04))',

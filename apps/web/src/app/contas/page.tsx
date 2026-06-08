@@ -26,6 +26,8 @@ export default async function ContasPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
 
+  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
+
   const month = new Date().toISOString().slice(0, 7);
   const [my, mm] = month.split('-').map(Number);
   const nextMonth = new Date(my, mm, 1).toISOString().slice(0, 10);
@@ -99,9 +101,6 @@ export default async function ContasPage() {
   const pctJuliana = totalFatura > 0 ? (settlement.julianaPart / totalFatura) * 100 : 0;
   const pctCasal = totalFatura > 0 ? (settlement.casalTotal / totalFatura) * 100 : 0;
   const pctI2 = totalFatura > 0 ? (settlement.i2Part / totalFatura) * 100 : 0;
-
-  const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
-
 
   return (
     <div className="min-h-screen pb-28 md:pl-60">

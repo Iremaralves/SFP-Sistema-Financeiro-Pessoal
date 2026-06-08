@@ -12,6 +12,7 @@ import { BillsCard, type Bill } from './BillsCard';
 import { IncomeCard, type IncomeLine } from './IncomeCard';
 import { QuickActions } from './QuickActions';
 import { ProfileScopeToggle } from './ProfileScopeToggle';
+import { AnchorHero } from './AnchorHero';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -105,6 +106,16 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
       </div>
 
       <div className="px-4 md:px-8 pb-28 md:pb-12 space-y-3 page-container fade-up-stagger">
+
+        {/* AnchorHero — número-chave por escopo (Hierarquia Radical) */}
+        {metrics && (
+          <AnchorHero
+            scope={scope}
+            faturaTotal={metrics.faturaTotal}
+            saldoContas={metrics.saldoContas}
+            cycle={cycle}
+          />
+        )}
 
         {/* Ações rápidas — atalhos pra o que Iremar mais usa */}
         {metrics && (

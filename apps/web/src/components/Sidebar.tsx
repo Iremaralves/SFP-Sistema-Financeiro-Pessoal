@@ -82,11 +82,7 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Toggle de perfil — pessoal/empresa/tudo */}
-      <div className="px-4 py-3 border-b border-white/05">
-        <p className="text-white/30 text-[9px] uppercase tracking-widest mb-1.5">Visualizando</p>
-        <ProfileScopeToggle current={scope} locked={isOp} variant="compact" />
-      </div>
+      {/* Toggle de perfil ficou só no header do dashboard pra evitar redundância */}
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

@@ -154,12 +154,7 @@ export function BottomNav({
             </div>
 
             <div className="px-4 pt-2 pb-5">
-              {/* Toggle de perfil — mobile */}
-              <div className="mb-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <p className="text-white/25 text-[10px] uppercase tracking-widest mb-2 px-1">Visualizando</p>
-                <ProfileScopeToggle current={scope} locked={isOp} variant="full" />
-              </div>
-
+              {/* Toggle de perfil ficou só no header do dashboard */}
               <p className="text-white/25 text-[10px] uppercase tracking-widest mb-3 px-1">
                 Menu
               </p>

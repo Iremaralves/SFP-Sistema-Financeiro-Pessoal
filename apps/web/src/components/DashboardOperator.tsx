@@ -10,6 +10,7 @@ import Link from 'next/link';
 import type { ProfileScope } from '@/lib/profile-scope';
 import { QuickActions } from './QuickActions';
 import { ProfileScopeToggle } from './ProfileScopeToggle';
+import { AnchorHero } from './AnchorHero';
 
 interface DashboardMetrics {
   faturaTotal: number;
@@ -72,6 +73,15 @@ export function DashboardOperator({ profile, transactions, month, bills = [], sc
       </div>
 
       <div className="px-4 md:px-8 pb-28 md:pb-12 space-y-3 page-container fade-up-stagger">
+
+        {/* AnchorHero — fatura cartão (Juliana sempre vê pessoal) */}
+        {metrics && (
+          <AnchorHero
+            scope={scope}
+            faturaTotal={metrics.faturaTotal}
+            saldoContas={metrics.saldoContas}
+          />
+        )}
 
         {/* Ações rápidas */}
         {metrics && (

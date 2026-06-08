@@ -1,0 +1,153 @@
+name: i2-redesign-completo
+description: >
+  Squad sênior multidisciplinar para auditoria visual + UX + remodelagem
+  completa do i2 Finance. Avalia o estado atual de todas as telas, faz
+  benchmark com referências do mercado (fintechs e SaaS de produtividade),
+  redesenha mobile e desktop, e entrega plano de implementação em ondas
+  pragmáticas que não quebram produção. Liberdade total pra propor mudanças
+  estruturais — não é só ajuste cosmético.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  app_path: apps/web/src
+  prod_url: https://i2-finance.vercel.app
+  audience:
+    iremar:
+      role: admin
+      perfil: Empreendedor (i2 Soluções), 40+ anos, gestor financeiro de PF + PJ
+      uso: desktop (gestão profunda) + mobile (consulta rápida)
+      pain_points:
+        - Hoje precisa trocar de contexto mental entre PF e PJ
+        - Toma muitas decisões por dia, precisa ver tudo em 1 olhada
+        - Compara constantemente com Nubank
+    juliana:
+      role: operator
+      perfil: Companheira, gestora dos lançamentos PF
+      uso: 100% mobile
+      pain_points:
+        - Categoriza dezenas de compras por mês
+        - Não pode quebrar dados — precisa de UI defensiva
+        - Quer fluxo linear, sem decisões complexas
+
+  current_design:
+    base: OLED dark (#000000 puro)
+    style: Glassmorphism (rgba branca + blur 20px)
+    palette:
+      iremar: '#3b82f6 → #6366f1'
+      juliana: '#ec4899 → #f472b6'
+      i2:      '#f59e0b → #d97706'
+      casal:   '#06b6d4'
+      success: '#34d399'
+      warning: '#fbbf24'
+      danger:  '#f87171'
+    typography: sistema, tabular-nums em valores
+    components:
+      - QuickActions (4 atalhos grid 2x2/4-col)
+      - BillsCard, IncomeCard
+      - DashboardAdmin/Operator
+      - Sidebar desktop + BottomNav mobile + Drawer "Mais"
+      - ProfileScopeToggle (Pessoal/Empresa/Tudo)
+
+  pages:
+    - /dashboard         — visão geral PF+PJ
+    - /lancamentos       — lista cronológica
+    - /lancamentos/[id]  — detalhe + edição
+    - /lancamentos/novo  — criar manual
+    - /compromissos      — recorrentes a pagar
+    - /contas            — saldos por banco
+    - /empresa           — DRE i2
+    - /empresa/notas     — Notas Fiscais
+    - /categorizar       — flagged sem responsável
+    - /acerto            — fechamento Iremar × Juliana
+    - /mes               — resumo mensal
+    - /transferencias    — entre contas
+    - /relatorios        — gráficos
+    - /importar          — CSV cartão
+    - /backups           — snapshots
+    - /login             — autenticação
+
+deliverables:
+  primary:
+    - Audit visual de TODAS as telas (estado atual + dor)
+    - Benchmark de 3+ produtos referência
+    - Manifesto visual: 5 princípios + paleta refinada + tokens
+    - Information Architecture nova (sitemap + jornadas críticas)
+    - Especificações mobile pra cada tela
+    - Especificações desktop pra cada tela
+    - Plano de implementação em 3 ondas
+    - Validação contra realidade dos usuários
+
+  forbidden:
+    - "Quebrar produção"
+    - "Mudar tudo de uma vez (deve ser onda)"
+    - "Ignorar o tema dark — é parte da identidade"
+    - "Adicionar feature nova sem necessidade — foco é REDESIGN não escopo"
+
+pipeline:
+  - id: audit_atual
+    name: "Fase 1 — Auditoria do estado atual"
+    agent: marcus_ux
+    description: >
+      Cataloga TODAS as 16 telas. Para cada uma documenta: o que mostra,
+      hierarquia visual, pontos de fricção, inconsistências com outras telas.
+      Lista os 10 maiores problemas em ordem de impacto.
+
+  - id: benchmark
+    name: "Fase 2 — Benchmark"
+    agent: marcus_ux
+    description: >
+      Analisa 3 produtos referência (mínimo): 1 fintech (Nubank ou Revolut),
+      1 produtividade (Linear ou Notion), 1 dashboard financeiro (Stripe
+      Dashboard ou QuickBooks). Extrai patterns aplicáveis ao i2 Finance.
+
+  - id: visao_principios
+    name: "Fase 3 — Visão & Princípios"
+    agent: olivia_director
+    description: >
+      Define manifesto de design em 5 princípios. Refina paleta. Cria tokens
+      (cores, spacing, radius, shadow, motion). Define tipografia (talvez
+      adicionar uma fonte custom — Inter Tight, Geist, IBM Plex).
+
+  - id: ia_fluxos
+    name: "Fase 4 — Arquitetura de Informação"
+    agent: marcus_ux
+    description: >
+      Repensa sitemap. Define 3 jornadas críticas: "Iremar abre o app no
+      mobile a caminho de reunião", "Juliana categoriza fatura à noite",
+      "Iremar planeja mês no desktop domingo". Hierarquia de menus.
+
+  - id: mobile_design
+    name: "Fase 5 — Design Mobile"
+    agent: tarik_mobile
+    description: >
+      Especifica cada tela em mobile-first. Touch targets ≥ 44px, thumb zone
+      respeitada, gestures naturais. Define safe areas, scroll behavior,
+      transições entre páginas. Sofia complementa com microinterações.
+
+  - id: desktop_design
+    name: "Fase 6 — Design Desktop"
+    agent: helena_desktop
+    description: >
+      Aproveita espaço de 1280-1920px sem repetir o mobile esticado. Sidebar
+      enriquecida, multi-coluna onde fizer sentido, atalhos de teclado,
+      hover states que aparecem mais info. Sofia complementa com componentes.
+
+  - id: implementation_plan
+    name: "Fase 7 — Plano de Implementação"
+    agent: diego_dev
+    description: >
+      Quebra o redesign em 3 ondas pragmáticas que não derrubam produção:
+      Onda 1 (tokens + componentes base — 1 deploy), Onda 2 (telas críticas —
+      dashboard, compromissos, lancamentos — 3-4 deploys), Onda 3 (telas
+      secundárias + polish — 2-3 deploys). Inclui rollback strategy.
+
+  - id: validacao_persona
+    name: "Fase 8 — Validação contra realidade"
+    agent: iremar_validator
+    description: >
+      Lê TUDO que foi produzido nas fases anteriores e responde brutalmente:
+      "Iremar de fato usaria assim?" "Juliana entenderia?". Lista riscos
+      reais, simplificações necessárias, decisões questionáveis.

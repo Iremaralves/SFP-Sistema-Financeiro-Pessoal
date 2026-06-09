@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { calculateInvoiceSettlement } from '@i2fin/core';
 import type { Transaction } from '@i2fin/schema';
 import { BottomNav } from './BottomNav';
@@ -57,6 +58,13 @@ export function DashboardOperator({ profile, transactions, month, scope = 'pesso
 
   const firstName = profile.name.split(' ')[0] || 'Juliana';
 
+  // Saudação por horário (client-side, evita mismatch de hidratação)
+  const [greeting, setGreeting] = useState('Olá');
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite');
+  }, []);
+
   // ── Progresso de categorização ──────────────────────────────────────────
   const total = transactions.length;
   const unassigned = transactions.filter(t => t.responsible === 'unassigned').length;
@@ -104,7 +112,7 @@ export function DashboardOperator({ profile, transactions, month, scope = 'pesso
           </div>
         </div>
         <h1 className="text-2xl md:text-3xl font-bold mt-2" style={{ color: 'rgba(255,255,255,0.85)' }}>
-          Boa noite, <span className="text-white">{firstName}</span> 👋
+          {greeting}, <span className="text-white">{firstName}</span> 👋
         </h1>
         <p className="text-white/35 text-xs mt-1 capitalize">Fatura de {monthLabel} aberta</p>
       </div>

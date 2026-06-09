@@ -119,9 +119,15 @@ export default async function DashboardPage() {
   const scope = await getEffectiveScope(profile.role as 'admin' | 'operator');
 
   // ─── Métricas para Quick Actions (atalhos rápidos no topo) ─────────────────
-  // Total a pagar pendente (sum amount dos bills pendentes do mês)
-  const aPagarTotal = bills.reduce((sum, b) => sum + b.amount, 0);
-  const aPagarCount = bills.length;
+  // Total a pagar pendente — FILTRADO POR ESCOPO (não misturar PJ no perfil pessoal).
+  // pessoal: só não-i2 · empresa: só i2 · tudo: todos
+  const billsScoped = bills.filter(b => {
+    if (scope === 'pessoal') return b.responsible !== 'i2';
+    if (scope === 'empresa') return b.responsible === 'i2';
+    return true;
+  });
+  const aPagarTotal = billsScoped.reduce((sum, b) => sum + b.amount, 0);
+  const aPagarCount = billsScoped.length;
 
   // Total a receber do mês (income_records: pro-labore + juliana_transfer + outros)
   const aReceberTotal = (incomeRecords ?? []).reduce((s, r) => s + Number(r.amount), 0);

@@ -19,6 +19,7 @@ export function BudgetGauge({ teto, faturaParte, boletosPF }: Props) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(teto));
+  const [err, setErr] = useState('');
 
   const comprometido = faturaParte + boletosPF;
   const disponivel = teto - comprometido;
@@ -31,10 +32,16 @@ export function BudgetGauge({ teto, faturaParte, boletosPF }: Props) {
     : { key: 'verde', emoji: '🟢', label: 'Tranquilo', color: '#34d399', glow: 'rgba(16,185,129,0.16)' };
 
   function salvarTeto() {
+    setErr('');
     const v = parseFloat(draft.replace(/\./g, '').replace(',', '.'));
+    if (!Number.isFinite(v) || v <= 0) {
+      setErr('Digite um valor válido (ex: 8000)');
+      return;
+    }
     startTransition(async () => {
       const res = await setBudgetTeto(v);
       if (res.ok) { setEditing(false); router.refresh(); }
+      else setErr(res.error ?? 'Erro ao salvar');
     });
   }
 
@@ -90,6 +97,7 @@ export function BudgetGauge({ teto, faturaParte, boletosPF }: Props) {
               className="text-[11px] font-semibold px-2 py-1 rounded-lg" style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
               {isPending ? '...' : 'OK'}
             </button>
+            {err && <span className="text-[10px] text-red-400 ml-1">{err}</span>}
           </div>
         ) : (
           <button onClick={() => { setDraft(String(teto)); setEditing(true); }}

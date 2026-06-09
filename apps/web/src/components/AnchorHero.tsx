@@ -48,11 +48,11 @@ export function AnchorHero({ scope, faturaTotal, saldoContas, cycle }: Props) {
     }
     if (scope === 'empresa') {
       return {
-        label: 'Saldo i2 Soluções',
+        label: 'Saldo total i2 Soluções',
         value: saldoContas,
         accent: '#fbbf24',
         glow: 'rgba(245,158,11,0.18)',
-        sublabel: 'Conta empresa · disponível pra operação',
+        sublabel: 'Operacional (Inter PJ) + reserva/cofre',
         sign: 1,
       };
     }

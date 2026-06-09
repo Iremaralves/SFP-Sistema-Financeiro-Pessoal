@@ -70,10 +70,18 @@ export default async function ContasPage() {
     ...a,
     balance: Number(a.opening_balance) + (txByAccount.get(a.id) ?? 0),
   }));
-  // Filtro de escopo: pessoal esconde 'company', empresa só mostra 'company'
+
+  // Entidade business (i2) pra separar PF/PJ por ENTIDADE, não por kind.
+  // Importante: a Reserva i2 é kind='investment' mas é PJ — não pode vazar pro Pessoal.
+  const { data: ents } = await supabase
+    .from('entities').select('id, type')
+    .eq('household_id', profile.household_id);
+  const businessEntityId = (ents ?? []).find(e => e.type === 'business')?.id ?? null;
+
+  // Filtro de escopo por ENTIDADE: pessoal = não-PJ; empresa = só PJ
   const accounts = accountsAll.filter(a => {
-    if (scope === 'pessoal') return a.kind !== 'company';
-    if (scope === 'empresa') return a.kind === 'company';
+    if (scope === 'pessoal') return a.entity_id !== businessEntityId;
+    if (scope === 'empresa') return a.entity_id === businessEntityId;
     return true;
   });
 

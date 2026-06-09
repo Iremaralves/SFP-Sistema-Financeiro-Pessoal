@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Juliana · Dashboard Pessoal · i2 Financeiro</title>
+<link rel="stylesheet" href="_theme.css" />
+<style>
+  /* ── Palco dos frames (só layout da página de apresentação) ───────────── */
+  body.stage {
+    padding: clamp(28px, 5vw, 64px) clamp(16px, 4vw, 56px) 96px;
+  }
+  .stage-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(32px, 5vw, 72px);
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .frame-col { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .frame-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── Frame celular ────────────────────────────────────────────────────── */
+  .device-mobile {
+    width: 375px;
+    flex: none;
+    border-radius: 44px;
+    padding: 12px;
+    background: linear-gradient(160deg, #1a1a22, #0a0a10);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.6),
+      0 50px 100px -40px rgba(0, 0, 0, 0.9),
+      0 0 60px -30px rgba(99, 102, 241, 0.3);
+  }
+  .device-mobile__screen {
+    border-radius: 34px;
+    overflow: hidden;
+    background: var(--bg-pure);
+    background-image: radial-gradient(120% 90% at 50% -10%, #0b0b16 0%, var(--bg) 42%, var(--bg-pure) 100%);
+    height: 760px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .device-mobile__notch {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 26px;
+    background: #000;
+    border-radius: 0 0 16px 16px;
+    z-index: 50;
+  }
+  .device-mobile .screen { padding-top: 44px; }
+
+  /* ── Frame desktop ────────────────────────────────────────────────────── */
+  .device-desktop {
+    width: min(1180px, 92vw);
+    flex: none;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-pure);
+    background-image: radial-gradient(120% 90% at 50% -10%, #0b0b16 0%, var(--bg) 42%, var(--bg-pure) 100%);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.6),
+      0 50px 100px -40px rgba(0, 0, 0, 0.9);
+  }
+  .device-desktop__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .device-desktop__dots { display: flex; gap: 7px; }
+  .device-desktop__dots span { width: 11px; height: 11px; border-radius: 99px; }
+  .device-desktop__addr {
+    margin-left: 14px;
+    font-size: 11.5px;
+    color: var(--text-ghost);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Header de app (compartilhado) ────────────────────────────────────── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .app-header__brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: var(--grad-iremar);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 13px; color: #fff;
+    letter-spacing: -0.04em;
+    box-shadow: 0 6px 16px -8px rgba(59, 130, 246, 0.7);
+  }
+  .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand-name small { display: block; font-size: 10px; font-weight: 600; color: var(--text-ghost); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 11px;
+    display: grid; place-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    font-size: 15px;
+    transition: background 160ms var(--ease);
+  }
+  .icon-btn:hover { background: rgba(255, 255, 255, 0.08); }
+
+  /* ── Greeting ─────────────────────────────────────────────────────────── */
+  /* Sussurra mais que o herói: nome em --text-dim, "Boa noite" mais leve.
+     O herói (anchor-number 4rem) é o único que grita. */
+  .greeting { display: flex; flex-direction: column; gap: 2px; }
+  .greeting h1 {
+    font-size: 17px; font-weight: 600; letter-spacing: -0.02em;
+    color: var(--text-dim);
+  }
+  .greeting h1 b { color: var(--text); font-weight: 700; }
+  .greeting p { font-size: 12.5px; color: var(--text-faint); }
+
+  /* ── SEMÁFORO hero (Posso usar o cartão?) ─────────────────────────────── */
+  /* Halo neutro/discreto: o estado (apertado) é comunicado pela pill + arco-
+     semáforo, não por inundar a área de amarelo. Número herói fica BRANCO
+     para máxima legibilidade (Marina: amarelo sobre halo amarelo = ruim). */
+  .semaforo {
+    --halo: rgba(255, 255, 255, 0.06);
+    background:
+      radial-gradient(150% 130% at 100% 0%, var(--halo), transparent 58%),
+      var(--glass-strong);
+  }
+  .semaforo__q {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+  }
+  .semaforo__main {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .semaforo__left { display: flex; flex-direction: column; gap: 10px; }
+
+  /* breakdown do comprometido */
+  .breakdown {
+    margin-top: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .breakdown__bar {
+    height: 12px;
+    border-radius: 99px;
+    overflow: hidden;
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  .breakdown__seg { height: 100%; }
+  .breakdown__seg--fatura { background: linear-gradient(90deg, var(--iremar), var(--iremar-2)); }
+  .breakdown__seg--boletos { background: linear-gradient(90deg, var(--juliana), var(--juliana-2)); }
+  .breakdown__seg--outros { background: rgba(255, 255, 255, 0.18); }
+  .breakdown__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .breakdown__legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .breakdown__legend i {
+    width: 8px; height: 8px; border-radius: 3px; flex: none;
+  }
+  .lg-fatura { background: linear-gradient(90deg, var(--iremar), var(--iremar-2)); }
+  .lg-boletos { background: linear-gradient(90deg, var(--juliana), var(--juliana-2)); }
+  .lg-outros { background: rgba(255, 255, 255, 0.3); }
+  .breakdown__legend b {
+    color: var(--text); font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Fatura card ──────────────────────────────────────────────────────── */
+  .fatura-card { display: flex; flex-direction: column; gap: var(--space-4); }
+  .fatura-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .fatura-brand { display: flex; align-items: center; gap: 11px; }
+  .fatura-logo {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #2d1f5e, #1a1140);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    display: grid; place-items: center;
+    font-size: 17px;
+  }
+  .fatura-card__total { display: flex; flex-direction: column; gap: 2px; }
+  .fatura-card__total .v {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    font-size: 26px; font-weight: 700; letter-spacing: -0.04em;
+  }
+  .fatura-split {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 12px var(--space-4);
+    border-radius: var(--radius-item);
+    background: rgba(236, 72, 153, 0.07);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+  }
+  .fatura-split__ring {
+    flex: none;
+    width: 42px; height: 42px;
+    border-radius: 99px;
+    background:
+      conic-gradient(var(--juliana) 0% 42%, rgba(255,255,255,0.08) 42% 100%);
+    display: grid; place-items: center;
+  }
+  .fatura-split__ring span {
+    width: 32px; height: 32px;
+    border-radius: 99px;
+    background: var(--bg-elevated);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--iremar);
+  }
+  .fatura-split__body { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .fatura-split__body .t { font-size: 12.5px; color: var(--text-dim); }
+  .fatura-split__body .v {
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
+  }
+
+  /* ── Grid desktop ─────────────────────────────────────────────────────── */
+  .dash-cols {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  .dash-cols .col-stack { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  /* avatares do casal no rodapé do header */
+  .couple { display: flex; align-items: center; }
+  .couple .avatar { width: 28px; height: 28px; font-size: 11px; border-radius: 9px; border: 2px solid var(--bg); }
+  .couple .avatar:nth-child(2) { margin-left: -8px; }
+
+  /* CTA principal da Juliana: categorizar */
+  .cta-categorizar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; border-radius: var(--radius-card);
+    background: radial-gradient(140% 120% at 0% 0%, rgba(236,72,153,0.18), transparent 60%), var(--glass-strong);
+    border: 1px solid rgba(236,72,153,0.3);
+    text-decoration: none;
+  }
+  .cta-categorizar__icon {
+    width: 44px; height: 44px; border-radius: 13px; flex: none;
+    display: grid; place-items: center; font-size: 22px;
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 8px 20px -10px rgba(236,72,153,0.8);
+  }
+  .cta-categorizar__body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .cta-categorizar__title { font-size: 15px; font-weight: 700; color: #fff; }
+  .cta-categorizar__sub { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .cta-categorizar__chev { color: #f9a8d4; font-size: 20px; }
+</style>
+</head>
+<body class="stage">
+
+<div class="stage-grid">
+
+  <!-- ════════════════════════════ MOBILE ════════════════════════════ -->
+  <div class="frame-col">
+    <div class="frame-label">📱 Mobile · 375px</div>
+    <div class="device-mobile">
+      <div class="device-mobile__screen">
+        <div class="device-mobile__notch"></div>
+        <main class="screen stagger">
+
+          <!-- HEADER -->
+          <header class="app-header fade-up">
+            <div class="scope-toggle">
+              <button class="scope-toggle__btn is-active" style="background:linear-gradient(135deg,#ec4899,#f472b6);color:#fff;cursor:default">🔒 Pessoal</button>
+              
+              
+            </div>
+            <button class="icon-btn" title="Sair">⏻</button>
+          </header>
+
+          <div class="greeting fade-up">
+            <h1>Boa noite, Juliana 👋</h1>
+            <p>Domingo, 8 de junho · operadora · só pessoal</p>
+          </div>
+
+          <!-- SEMÁFORO -->
+          <a class="cta-categorizar fade-up" href="#">
+            <div class="cta-categorizar__icon">🏷️</div>
+            <div class="cta-categorizar__body">
+              <span class="cta-categorizar__title">8 lançamentos pra categorizar</span>
+              <span class="cta-categorizar__sub">Fatura de junho · toque pra começar</span>
+            </div>
+            <span class="cta-categorizar__chev">›</span>
+          </a>
+
+          <section class="anchor-hero semaforo fade-up">
+            <div class="semaforo__q">Posso usar o cartão?</div>
+            <div class="semaforo__main">
+              <div class="semaforo__left">
+                <div class="anchor-number anchor-number--warn">
+                  <span class="currency">R$</span>1.615<span class="cents">,00</span>
+                </div>
+                <div class="row gap-3">
+                  <span class="pill pill--warn">Apertado</span>
+                  <span class="label-eyebrow">Disponível pra gastar</span>
+                </div>
+              </div>
+              <div class="arc-wrap">
+                <div class="gauge-arc"></div>
+                <div class="arc-center">
+                  <div class="arc-center__pct tabular">80%</div>
+                  <div class="arc-center__lbl">do teto</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="breakdown">
+              <div class="breakdown__bar">
+                <div class="breakdown__seg breakdown__seg--fatura" style="width:31%"></div>
+                <div class="breakdown__seg breakdown__seg--boletos" style="width:38.6%"></div>
+                <div class="breakdown__seg breakdown__seg--outros" style="width:10.2%"></div>
+              </div>
+              <div class="breakdown__legend">
+                <span><i class="lg-fatura"></i> Fatura (sua parte) <b class="tabular">R$ 2.480</b></span>
+                <span><i class="lg-boletos"></i> Boletos PF <b class="tabular">R$ 3.090</b></span>
+                <span><i class="lg-outros"></i> Outros <b class="tabular">R$ 815</b></span>
+              </div>
+            </div>
+
+            <hr class="divider" style="margin-top:18px" />
+            <div class="row row--between" style="margin-top:14px">
+              <span class="label-eyebrow">Teto do mês</span>
+              <span class="tabular" style="font-weight:700">R$ 8.000,00</span>
+            </div>
+            <div class="row row--between" style="margin-top:6px">
+              <span class="label-eyebrow">Comprometido</span>
+              <span class="tabular text-warn" style="font-weight:700">R$ 6.385,00</span>
+            </div>
+          </section>
+
+          <!-- FATURA -->
+          <div class="section-title fade-up">
+            <span>Fatura do cartão</span>
+            <span class="section-title__meta">fecha em 18 dias</span>
+          </div>
+          <section class="glass-card lift fatura-card fade-up">
+            <div class="fatura-card__top">
+              <div class="fatura-brand">
+                <div class="fatura-logo">💳</div>
+                <div class="col" style="gap:2px">
+                  <span style="font-size:13.5px;font-weight:600">Nubank · final 4471</span>
+                  <span style="font-size:11px;color:var(--text-faint)">Fatura aberta</span>
+                </div>
+              </div>
+              <div class="fatura-card__total" style="text-align:right">
+                <span class="v tabular">R$ 5.905,94</span>
+                <span style="font-size:10.5px;color:var(--text-ghost);text-transform:uppercase;letter-spacing:0.1em">total da fatura</span>
+              </div>
+            </div>
+            <div class="fatura-split">
+              <div class="fatura-split__ring"><span class="tabular">42%</span></div>
+              <div class="fatura-split__body">
+                <span class="t">Sua parte (Juliana)</span>
+                <span class="v tabular">R$ 2.480,00</span>
+              </div>
+              <div class="couple">
+                <div class="avatar avatar--iremar">I</div>
+                <div class="avatar avatar--juliana">J</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ESSA SEMANA -->
+          <div class="section-title fade-up">
+            <span>Essa semana · a pagar</span>
+            <span class="section-title__meta">próx. 7 dias</span>
+          </div>
+          <section class="solid-card fade-up">
+            <div class="list">
+              <div class="list-row" data-owner="casal">
+                <div class="day-badge day-badge--warn">
+                  <span class="day-badge__num tabular">10</span>
+                  <span class="day-badge__mon">jun</span>
+                </div>
+                <div class="list-row__body">
+                  <span class="list-row__title">Aluguel</span>
+                  <span class="list-row__meta">
+                    <span class="pill pill--method">🏦 Boleto</span>
+                    em 2 dias
+                  </span>
+                </div>
+                <span class="list-row__amount tabular">R$ 2.200,00</span>
+              </div>
+              <div class="list-row" data-owner="casal">
+                <div class="day-badge">
+                  <span class="day-badge__num tabular">12</span>
+                  <span class="day-badge__mon">jun</span>
+                </div>
+                <div class="list-row__body">
+                  <span class="list-row__title">Plano de saúde</span>
+                  <span class="list-row__meta">
+                    <span class="pill pill--method">⚡ PIX</span>
+                    em 4 dias
+                  </span>
+                </div>
+                <span class="list-row__amount tabular">R$ 890,00</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- A RECEBER -->
+          <div class="section-title fade-up">
+            <span>A receber</span>
+            <span class="section-title__meta">este mês</span>
+          </div>
+          <section class="solid-card fade-up">
+            <div class="list">
+              <div class="list-row" data-owner="iremar">
+                <div class="day-badge">
+                  <span class="day-badge__num tabular">05</span>
+                  <span class="day-badge__mon">jun</span>
+                </div>
+                <div class="list-row__body">
+                  <span class="list-row__title">Pró-labore · i2 Soluções</span>
+                  <span class="list-row__meta">
+                    <span class="pill pill--method">⚡ PIX</span>
+                    recebido
+                  </span>
+                </div>
+                <span class="list-row__amount list-row__amount--success tabular">+ R$ 5.000,00</span>
+              </div>
+            </div>
+          </section>
+
+          <button class="btn btn--block fade-up" style="margin-top:4px">Adicionar um gasto da família</button>
+
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ DESKTOP ════════════════════════════ -->
+  <div class="frame-col">
+    <div class="frame-label">🖥️ Desktop · 1180px</div>
+    <div class="device-desktop">
+      <div class="device-desktop__bar">
+        <div class="device-desktop__dots">
+          <span style="background:#ff5f57"></span>
+          <span style="background:#febc2e"></span>
+          <span style="background:#28c840"></span>
+        </div>
+        <span class="device-desktop__addr">app.i2financeiro.com.br/dashboard</span>
+      </div>
+
+      <main class="screen screen--wide" style="padding-top:32px;gap:var(--space-6)">
+
+        <!-- HEADER -->
+        <header class="app-header">
+          <div class="app-header__brand">
+            <div class="brand-mark">i2</div>
+            <div class="brand-name">Financeiro<small>Visão pessoal</small></div>
+          </div>
+          <div class="row gap-4">
+            <div class="scope-toggle">
+              <button class="scope-toggle__btn is-active" style="background:linear-gradient(135deg,#ec4899,#f472b6);color:#fff;cursor:default">🔒 Pessoal</button>
+              
+              
+            </div>
+            <div class="row gap-2">
+              <div class="couple">
+                <div class="avatar avatar--iremar">I</div>
+                <div class="avatar avatar--juliana">J</div>
+              </div>
+              <button class="icon-btn" title="Sair">⏻</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="greeting">
+          <h1>Boa noite, Juliana 👋</h1>
+          <p>Domingo, 8 de junho de 2026 · você &amp; Juliana</p>
+        </div>
+
+        <div class="dash-cols">
+
+          <!-- COLUNA ESQUERDA — semáforo + fatura -->
+          <div class="col-stack">
+
+            <!-- SEMÁFORO -->
+            <section class="anchor-hero semaforo">
+              <div class="semaforo__q">Posso usar o cartão?</div>
+              <div class="semaforo__main">
+                <div class="semaforo__left">
+                  <div class="anchor-number anchor-number--warn" style="font-size:clamp(3rem,5vw,4rem)">
+                    <span class="currency">R$</span>1.615<span class="cents">,00</span>
+                  </div>
+                  <div class="row gap-3">
+                    <span class="pill pill--warn">Apertado</span>
+                    <span class="label-eyebrow">Disponível pra gastar este mês</span>
+                  </div>
+                </div>
+                <div class="arc-wrap">
+                  <div class="gauge-arc"></div>
+                  <div class="arc-center">
+                    <div class="arc-center__pct tabular">80%</div>
+                    <div class="arc-center__lbl">do teto</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="breakdown">
+                <div class="breakdown__bar">
+                  <div class="breakdown__seg breakdown__seg--fatura" style="width:31%"></div>
+                  <div class="breakdown__seg breakdown__seg--boletos" style="width:38.6%"></div>
+                  <div class="breakdown__seg breakdown__seg--outros" style="width:10.2%"></div>
+                </div>
+                <div class="breakdown__legend">
+                  <span><i class="lg-fatura"></i> Fatura (sua parte) <b class="tabular">R$ 2.480</b></span>
+                  <span><i class="lg-boletos"></i> Boletos PF <b class="tabular">R$ 3.090</b></span>
+                  <span><i class="lg-outros"></i> Outros gastos <b class="tabular">R$ 815</b></span>
+                </div>
+              </div>
+
+              <hr class="divider" style="margin-top:20px" />
+              <div class="row" style="margin-top:16px;gap:var(--space-8)">
+                <div class="col" style="gap:4px">
+                  <span class="label-eyebrow">Teto do mês</span>
+                  <span class="tabular" style="font-size:18px;font-weight:700">R$ 8.000,00</span>
+                </div>
+                <div class="col" style="gap:4px">
+                  <span class="label-eyebrow">Comprometido</span>
+                  <span class="tabular text-warn" style="font-size:18px;font-weight:700">R$ 6.385,00</span>
+                </div>
+                <div class="col" style="gap:4px">
+                  <span class="label-eyebrow">Sobra</span>
+                  <span class="tabular text-warn" style="font-size:18px;font-weight:700">R$ 1.615,00</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- FATURA -->
+            <div>
+              <div class="section-title">
+                <span>Fatura do cartão</span>
+                <span class="section-title__meta">Nubank · fecha em 18 dias</span>
+              </div>
+              <section class="glass-card lift fatura-card" style="margin-top:12px">
+                <div class="fatura-card__top">
+                  <div class="fatura-brand">
+                    <div class="fatura-logo">💳</div>
+                    <div class="col" style="gap:2px">
+                      <span style="font-size:14px;font-weight:600">Nubank · final 4471</span>
+                      <span style="font-size:11.5px;color:var(--text-faint)">Fatura aberta · vence dia 28</span>
+                    </div>
+                  </div>
+                  <div class="fatura-card__total" style="text-align:right">
+                    <span class="v tabular" style="font-size:30px">R$ 5.905,94</span>
+                    <span style="font-size:10.5px;color:var(--text-ghost);text-transform:uppercase;letter-spacing:0.1em">total da fatura</span>
+                  </div>
+                </div>
+                <div class="fatura-split">
+                  <div class="fatura-split__ring"><span class="tabular">42%</span></div>
+                  <div class="fatura-split__body">
+                    <span class="t">Sua parte (Juliana) · rateio do casal</span>
+                    <span class="v tabular">R$ 2.480,00</span>
+                  </div>
+                  <div class="couple">
+                    <div class="avatar avatar--iremar">I</div>
+                    <div class="avatar avatar--juliana">J</div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+          </div>
+
+          <!-- COLUNA DIREITA — semana + a receber + ação -->
+          <div class="col-stack">
+
+            <!-- ESSA SEMANA -->
+            <div>
+              <div class="section-title">
+                <span>Essa semana · a pagar</span>
+                <span class="section-title__meta">próx. 7 dias · R$ 3.090</span>
+              </div>
+              <section class="solid-card" style="margin-top:12px">
+                <div class="list">
+                  <div class="list-row" data-owner="casal">
+                    <div class="day-badge day-badge--warn">
+                      <span class="day-badge__num tabular">10</span>
+                      <span class="day-badge__mon">jun</span>
+                    </div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Aluguel</span>
+                      <span class="list-row__meta">
+                        <span class="pill pill--method">🏦 Boleto</span>
+                        vence em 2 dias
+                      </span>
+                    </div>
+                    <span class="list-row__amount tabular">R$ 2.200,00</span>
+                  </div>
+                  <div class="list-row" data-owner="casal">
+                    <div class="day-badge">
+                      <span class="day-badge__num tabular">12</span>
+                      <span class="day-badge__mon">jun</span>
+                    </div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Plano de saúde</span>
+                      <span class="list-row__meta">
+                        <span class="pill pill--method">⚡ PIX</span>
+                        vence em 4 dias
+                      </span>
+                    </div>
+                    <span class="list-row__amount tabular">R$ 890,00</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- A RECEBER -->
+            <div>
+              <div class="section-title">
+                <span>A receber</span>
+                <span class="section-title__meta">este mês · R$ 5.000</span>
+              </div>
+              <section class="solid-card" style="margin-top:12px">
+                <div class="list">
+                  <div class="list-row" data-owner="iremar">
+                    <div class="day-badge">
+                      <span class="day-badge__num tabular">05</span>
+                      <span class="day-badge__mon">jun</span>
+                    </div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Pró-labore · i2 Soluções</span>
+                      <span class="list-row__meta">
+                        <span class="pill pill--method">⚡ PIX</span>
+                        recebido
+                      </span>
+                    </div>
+                    <span class="list-row__amount list-row__amount--success tabular">+ R$ 5.000,00</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="row gap-3">
+              <button class="btn btn--block">Adicionar um gasto da família</button>
+              <button class="btn btn--ghost btn--block">Ver extrato</button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

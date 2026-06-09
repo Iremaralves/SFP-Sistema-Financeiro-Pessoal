@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>i2 · Dashboard Empresa</title>
+<link rel="stylesheet" href="_theme.css" />
+<style>
+  /* ── Página de apresentação dos dois frames ─────────────────── */
+  body.preview {
+    padding: 48px clamp(16px, 4vw, 56px) 96px;
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, #0b0b16 0%, var(--bg) 46%, var(--bg-pure) 100%);
+  }
+  .preview-head {
+    max-width: 1520px;
+    margin: 0 auto 36px;
+  }
+  .preview-head h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .preview-head p {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--text-ghost);
+    letter-spacing: 0.02em;
+  }
+  .frames {
+    max-width: 1520px;
+    margin: 0 auto;
+    display: flex;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .frame-col { display: flex; flex-direction: column; gap: 14px; }
+  .frame-col--grow { flex: 1; min-width: 680px; }
+  .frame-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding-left: 6px;
+  }
+
+  /* Moldura de celular */
+  .device-mobile {
+    width: 375px;
+    flex: none;
+    border-radius: 44px;
+    padding: 12px;
+    background: linear-gradient(160deg, #16161f, #08080d);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 40px 90px -40px rgba(0, 0, 0, 0.9);
+    position: relative;
+  }
+  .device-mobile__screen {
+    border-radius: 34px;
+    overflow: hidden;
+    background: var(--bg-pure);
+    background-image: radial-gradient(120% 70% at 50% -10%, #0b0b16 0%, var(--bg) 50%, var(--bg-pure) 100%);
+    height: 812px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .device-mobile__notch {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 116px;
+    height: 30px;
+    border-radius: 99px;
+    background: #000;
+    z-index: 40;
+  }
+
+  /* Moldura desktop */
+  .device-desktop {
+    width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--bg-pure);
+    background-image: radial-gradient(110% 60% at 50% -10%, #0b0b16 0%, var(--bg) 50%, var(--bg-pure) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 40px 90px -40px rgba(0, 0, 0, 0.9);
+  }
+  .device-desktop__bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(255, 255, 255, 0.015);
+  }
+  .device-desktop__bar i {
+    width: 11px; height: 11px; border-radius: 99px; display: block;
+  }
+  .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+  .device-desktop__url {
+    margin-left: 12px;
+    font-size: 11px;
+    color: var(--text-ghost);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .device-desktop__body {
+    height: 780px;
+    overflow-y: auto;
+  }
+
+  /* ── App chrome ─────────────────────────────────────────────── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .app-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-mark {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: var(--grad-i2);
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 800; color: #1a1206;
+    letter-spacing: -0.04em;
+    box-shadow: var(--shadow-glow-i2);
+  }
+  .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .app-header__right { display: flex; align-items: center; gap: var(--space-3); }
+  .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .user-chip__av {
+    width: 28px; height: 28px; border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--hairline);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; color: var(--text-dim);
+  }
+  .link-quiet {
+    font-size: 12px; font-weight: 600; color: var(--text-faint);
+    letter-spacing: -0.01em;
+    transition: color 160ms var(--ease);
+  }
+  .link-quiet:hover { color: var(--text-dim); }
+  .link-arrow {
+    font-size: 11.5px; font-weight: 600; color: var(--i2);
+    letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  /* hero header row */
+  .hero-top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  /* projeto card (a receber) */
+  .proj {
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: 15px var(--space-5);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .proj:last-child { border-bottom: none; }
+  .proj__rail {
+    flex: none; width: 8px; align-self: stretch;
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 4px;
+  }
+  .proj__dot {
+    width: 10px; height: 10px; border-radius: 99px; flex: none;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.03);
+  }
+  .proj__dot--recebido { background: var(--success); box-shadow: 0 0 0 4px var(--success-dim); }
+  .proj__dot--faturado { background: var(--iremar); box-shadow: 0 0 0 4px rgba(59,130,246,0.16); }
+  .proj__dot--previsto { background: var(--text-ghost); }
+  .proj__line { flex: 1; width: 2px; background: var(--hairline); margin-top: 4px; }
+  .proj:last-child .proj__line { display: none; }
+  .proj__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .proj__title { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .proj__meta { display: flex; align-items: center; gap: var(--space-2); font-size: 11.5px; color: var(--text-faint); }
+  .proj__amount {
+    flex: none; text-align: right;
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    font-size: 16px; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .proj__amount--dim { color: var(--text-dim); }
+
+  /* desktop grid */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  .stack { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  .card-pad { padding: var(--space-5) var(--space-5) var(--space-4); }
+  .list-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px var(--space-5);
+    border-top: 1px solid var(--hairline);
+  }
+  .list-foot__total {
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    font-size: 14px; font-weight: 700; color: var(--warn);
+  }
+</style>
+</head>
+<body class="preview">
+
+<div class="preview-head">
+  <h1>i2 · Dashboard Empresa</h1>
+  <p>Perfil Empresa ativo · OLED dark · glass com critério · dados reais da folha de junho/2026</p>
+</div>
+
+<div class="frames">
+
+  <!-- ══════════════════════════ MOBILE ══════════════════════════ -->
+  <div class="frame-col">
+    <span class="frame-label">📱 Mobile · 375px</span>
+    <div class="device-mobile">
+      <div class="device-mobile__notch"></div>
+      <div class="device-mobile__screen">
+        <div class="screen stagger">
+
+          <!-- HEADER -->
+          <header class="app-header fade-up">
+            <div class="app-header__brand">
+              <div class="brand-mark">i2</div>
+              <span class="brand-name">i2 Soluções</span>
+            </div>
+            <div class="app-header__right">
+              <span class="user-chip"><span class="user-chip__av">A</span></span>
+            </div>
+          </header>
+
+          <div class="scope-toggle" role="tablist" style="align-self:center">
+            <button class="scope-toggle__btn scope-toggle__btn--pf">Pessoal</button>
+            <button class="scope-toggle__btn scope-toggle__btn--pj is-active" aria-pressed="true">Empresa</button>
+            <button class="scope-toggle__btn">Tudo</button>
+          </div>
+
+          <!-- ANCHOR HERO -->
+          <section class="anchor-hero anchor-hero--i2 fade-up">
+            <div class="hero-top">
+              <span class="label-eyebrow">Saldo i2 Soluções</span>
+              <span class="pill pill--ghost">Junho 2026</span>
+            </div>
+            <div class="anchor-number tabular">
+              <span class="currency">R$</span>20.500<span class="cents">,00</span>
+            </div>
+            <div class="anchor-sub">
+              <span>operacional <span class="tabular">R$&nbsp;2.500</span></span>
+              <span class="text-ghost">·</span>
+              <span>reserva <span class="tabular">R$&nbsp;18.000</span></span>
+            </div>
+          </section>
+
+          <!-- STAT GRID 2x2 -->
+          <div class="stat-grid">
+            <div class="stat fade-up">
+              <span class="stat__label">A pagar</span>
+              <span class="stat__value stat__value--warn tabular">R$&nbsp;15.038</span>
+              <span class="stat__delta">9 lançamentos</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">A receber</span>
+              <span class="stat__value stat__value--success tabular">R$&nbsp;12.000</span>
+              <span class="stat__delta">2 projetos</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">Resultado do mês</span>
+              <span class="stat__value stat__value--danger tabular">−R$&nbsp;3.038</span>
+              <span class="stat__delta">receber − pagar</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">Próx. vencimento</span>
+              <span class="stat__value tabular">dia 5</span>
+              <span class="stat__delta">folha · PIX</span>
+            </div>
+          </div>
+
+          <!-- A RECEBER -->
+          <div class="section-title">
+            <span>A receber</span>
+            <span class="section-title__meta tabular">R$ 12.000 previstos</span>
+          </div>
+          <div class="solid-card fade-up">
+            <div class="proj">
+              <div class="proj__rail"><span class="proj__dot proj__dot--faturado"></span><span class="proj__line"></span></div>
+              <div class="proj__body">
+                <span class="proj__title">Projeto Site · Cliente X</span>
+                <div class="proj__meta">
+                  <span class="pill pill--method" style="color:var(--iremar);border-color:rgba(59,130,246,0.3)">Faturado</span>
+                  <span>prev. 15/jun</span>
+                </div>
+              </div>
+              <span class="proj__amount text-success tabular">R$&nbsp;8.000</span>
+            </div>
+            <div class="proj">
+              <div class="proj__rail"><span class="proj__dot proj__dot--previsto"></span><span class="proj__line"></span></div>
+              <div class="proj__body">
+                <span class="proj__title">Mensalidade · Cliente Y</span>
+                <div class="proj__meta">
+                  <span class="pill pill--method">Previsto</span>
+                  <span>prev. 20/jun</span>
+                </div>
+              </div>
+              <span class="proj__amount proj__amount--dim tabular">R$&nbsp;4.000</span>
+            </div>
+          </div>
+
+          <!-- A PAGAR -->
+          <div class="section-title">
+            <span>A pagar · Folha junho</span>
+            <a class="link-arrow" href="#">ver planejador →</a>
+          </div>
+          <div class="solid-card fade-up">
+            <div class="list">
+              <div class="list-row" data-owner="i2">
+                <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                <div class="list-row__body">
+                  <span class="list-row__title">Folha · 7 PIX (dia 5)</span>
+                  <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span><span>pró-labore, lucros, equipe</span></div>
+                </div>
+                <span class="list-row__amount tabular">R$&nbsp;11.388,71</span>
+              </div>
+              <div class="list-row" data-owner="i2">
+                <div class="day-badge day-badge--warn"><span class="day-badge__num tabular">20</span><span class="day-badge__mon">jun</span></div>
+                <div class="list-row__body">
+                  <span class="list-row__title">DAS Simples Nacional</span>
+                  <div class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span></div>
+                </div>
+                <span class="list-row__amount tabular">R$&nbsp;2.600,21</span>
+              </div>
+              <div class="list-row" data-owner="i2">
+                <div class="day-badge day-badge--warn"><span class="day-badge__num tabular">20</span><span class="day-badge__mon">jun</span></div>
+                <div class="list-row__body">
+                  <span class="list-row__title">INSS</span>
+                  <div class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span></div>
+                </div>
+                <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+              </div>
+            </div>
+            <div class="list-foot">
+              <span class="label-eyebrow">Total a desembolsar</span>
+              <span class="list-foot__total tabular">R$ 15.038,92</span>
+            </div>
+          </div>
+
+          <!-- déficit callout -->
+          <div class="glass-card lift fade-up" style="padding:18px 20px">
+            <div class="row row--between">
+              <div class="col gap-2">
+                <span class="label-eyebrow">Déficit do mês</span>
+                <span class="tabular" style="font-size:24px;font-weight:700;letter-spacing:-0.03em;color:var(--danger)">−R$&nbsp;12.538,92</span>
+                <span class="text-faint" style="font-size:11.5px">Inter PJ não cobre a folha</span>
+              </div>
+              <div class="col gap-2" style="align-items:flex-end;text-align:right">
+                <span class="pill pill--warn">Resgatar</span>
+                <span class="text-dim" style="font-size:11.5px">da Reserva i2</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ DESKTOP ══════════════════════════ -->
+  <div class="frame-col frame-col--grow">
+    <span class="frame-label">🖥️ Desktop · 1100px+</span>
+    <div class="device-desktop">
+      <div class="device-desktop__bar">
+        <i class="dot-r"></i><i class="dot-y"></i><i class="dot-g"></i>
+        <span class="device-desktop__url">financeiro.i2solucoes.com / empresa</span>
+      </div>
+      <div class="device-desktop__body">
+        <div class="screen screen--wide stagger">
+
+          <!-- HEADER -->
+          <header class="app-header fade-up">
+            <div class="app-header__brand">
+              <div class="brand-mark">i2</div>
+              <span class="brand-name">i2 Soluções Digitais</span>
+            </div>
+            <div class="app-header__right">
+              <div class="scope-toggle" role="tablist">
+                <button class="scope-toggle__btn scope-toggle__btn--pf">Pessoal</button>
+                <button class="scope-toggle__btn scope-toggle__btn--pj is-active" aria-pressed="true">Empresa</button>
+                <button class="scope-toggle__btn">Tudo</button>
+              </div>
+              <span class="user-chip"><span class="user-chip__av">A</span>admin</span>
+              <a class="link-quiet" href="#">Sair</a>
+            </div>
+          </header>
+
+          <!-- HERO + STATS row -->
+          <section class="anchor-hero anchor-hero--i2 fade-up" style="padding:30px 32px">
+            <div class="hero-top">
+              <div class="col gap-3">
+                <span class="label-eyebrow">Saldo i2 Soluções</span>
+                <div class="anchor-number tabular">
+                  <span class="currency">R$</span>20.500<span class="cents">,00</span>
+                </div>
+                <div class="anchor-sub">
+                  <span>operacional · Inter PJ <span class="tabular">R$&nbsp;2.500,00</span></span>
+                  <span class="text-ghost">·</span>
+                  <span>reserva · Reserva i2 <span class="tabular">R$&nbsp;18.000,00</span></span>
+                </div>
+              </div>
+              <span class="pill pill--ghost">Junho 2026</span>
+            </div>
+          </section>
+
+          <!-- STAT GRID linha (4 colunas) -->
+          <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat fade-up">
+              <span class="stat__label">A pagar</span>
+              <span class="stat__value stat__value--warn tabular">R$&nbsp;15.038,92</span>
+              <span class="stat__delta">9 lançamentos · folha jun</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">A receber</span>
+              <span class="stat__value stat__value--success tabular">R$&nbsp;12.000,00</span>
+              <span class="stat__delta">2 projetos previstos</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">Resultado do mês</span>
+              <span class="stat__value stat__value--danger tabular">−R$&nbsp;3.038,92</span>
+              <span class="stat__delta">a receber − a pagar</span>
+            </div>
+            <div class="stat fade-up">
+              <span class="stat__label">Próximo vencimento</span>
+              <span class="stat__value tabular">dia 5</span>
+              <span class="stat__delta">folha mensal · ⚡ PIX</span>
+            </div>
+          </div>
+
+          <!-- 2-col body -->
+          <div class="dash-grid">
+
+            <!-- COLUNA ESQUERDA — A PAGAR detalhada -->
+            <div class="stack">
+              <div class="section-title">
+                <span>A pagar · Folha de junho</span>
+                <a class="link-arrow" href="#">ver planejador →</a>
+              </div>
+              <div class="solid-card fade-up">
+                <div class="list">
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Pró-labore · Iremar</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;5.000,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Retirada de lucros</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;3.000,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Pedro</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;1.200,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Mayana</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;750,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Alana</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Contadora</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;500,00</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge"><span class="day-badge__num tabular">5</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">Eduarda · bolsa</span>
+                      <div class="list-row__meta"><span class="pill pill--method">⚡ PIX</span><span>proporcional 21/31 dias · 1º mês</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;338,71</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge day-badge--warn"><span class="day-badge__num tabular">20</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">DAS · Simples Nacional</span>
+                      <div class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;2.600,21</span>
+                  </div>
+                  <div class="list-row" data-owner="i2">
+                    <div class="day-badge day-badge--warn"><span class="day-badge__num tabular">20</span><span class="day-badge__mon">jun</span></div>
+                    <div class="list-row__body">
+                      <span class="list-row__title">INSS</span>
+                      <div class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span></div>
+                    </div>
+                    <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                  </div>
+                </div>
+                <div class="list-foot">
+                  <span class="label-eyebrow">Total a desembolsar</span>
+                  <span class="list-foot__total tabular">R$ 15.038,92</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUNA DIREITA — A RECEBER + déficit -->
+            <div class="stack">
+              <div class="section-title">
+                <span>A receber · Projetos</span>
+                <span class="section-title__meta tabular">R$ 12.000 previstos</span>
+              </div>
+              <div class="solid-card fade-up">
+                <div class="proj">
+                  <div class="proj__rail"><span class="proj__dot proj__dot--recebido"></span><span class="proj__line"></span></div>
+                  <div class="proj__body">
+                    <span class="proj__title">Sinal · Projeto anterior</span>
+                    <div class="proj__meta">
+                      <span class="pill pill--success">Recebido</span>
+                      <span>02/jun</span>
+                    </div>
+                  </div>
+                  <span class="proj__amount text-success tabular">R$&nbsp;2.000</span>
+                </div>
+                <div class="proj">
+                  <div class="proj__rail"><span class="proj__dot proj__dot--faturado"></span><span class="proj__line"></span></div>
+                  <div class="proj__body">
+                    <span class="proj__title">Projeto Site · Cliente X</span>
+                    <div class="proj__meta">
+                      <span class="pill pill--method" style="color:var(--iremar);border-color:rgba(59,130,246,0.3)">Faturado · NF emitida</span>
+                      <span>prev. 15/jun</span>
+                    </div>
+                  </div>
+                  <span class="proj__amount text-success tabular">R$&nbsp;8.000</span>
+                </div>
+                <div class="proj">
+                  <div class="proj__rail"><span class="proj__dot proj__dot--previsto"></span></div>
+                  <div class="proj__body">
+                    <span class="proj__title">Mensalidade · Cliente Y</span>
+                    <div class="proj__meta">
+                      <span class="pill pill--method">Previsto · recorrente</span>
+                      <span>prev. 20/jun</span>
+                    </div>
+                  </div>
+                  <span class="proj__amount proj__amount--dim tabular">R$&nbsp;4.000</span>
+                </div>
+              </div>
+
+              <!-- déficit callout glass -->
+              <div class="glass-card lift fade-up">
+                <span class="label-eyebrow">Caixa não cobre a folha</span>
+                <div class="row row--between" style="margin-top:14px;align-items:flex-end">
+                  <div class="col gap-2">
+                    <span class="text-faint" style="font-size:11.5px">Déficit do mês</span>
+                    <span class="tabular" style="font-size:32px;font-weight:700;letter-spacing:-0.035em;color:var(--danger)">−R$&nbsp;12.538,92</span>
+                  </div>
+                  <span class="pill pill--warn">Resgatar da Reserva i2</span>
+                </div>
+                <hr class="divider" style="margin:16px 0" />
+                <div class="row row--between" style="font-size:12.5px">
+                  <span class="text-faint">Inter PJ (operacional)</span>
+                  <span class="tabular text-dim">R$ 2.500,00</span>
+                </div>
+                <div class="row row--between" style="font-size:12.5px;margin-top:8px">
+                  <span class="text-faint">Folha a desembolsar dia 5</span>
+                  <span class="tabular text-warn">R$ 15.038,92</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

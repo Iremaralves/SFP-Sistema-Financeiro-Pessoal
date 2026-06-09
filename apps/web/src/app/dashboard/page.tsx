@@ -125,22 +125,26 @@ export default async function DashboardPage() {
   // Total a receber do mês (income_records: pro-labore + juliana_transfer + outros)
   const aReceberTotal = (incomeRecords ?? []).reduce((s, r) => s + Number(r.amount), 0);
 
-  // Saldo total das contas (positivos). Filtra por escopo.
+  // Saldo total das contas (positivos). Filtra por ENTIDADE (PF/PJ), não por kind.
   const { data: allTxForSaldo } = await supabase
     .from('transactions').select('account_id, amount')
     .eq('household_id', profile.household_id);
   const { data: scopedAccounts } = await supabase
-    .from('accounts').select('id, kind, opening_balance')
+    .from('accounts').select('id, kind, opening_balance, entity_id')
     .eq('household_id', profile.household_id)
     .eq('active', true);
+  const { data: entsForSaldo } = await supabase
+    .from('entities').select('id, type').eq('household_id', profile.household_id);
+  const bizEntityId = (entsForSaldo ?? []).find(e => e.type === 'business')?.id ?? null;
   const acctTx = new Map<string, number>();
   for (const t of (allTxForSaldo ?? [])) {
     acctTx.set(t.account_id, (acctTx.get(t.account_id) ?? 0) + Number(t.amount));
   }
   const filteredAccts = (scopedAccounts ?? []).filter(a => {
-    if (scope === 'pessoal') return a.kind !== 'company' && a.kind !== 'credit_card';
-    if (scope === 'empresa') return a.kind === 'company';
-    return a.kind !== 'credit_card'; // tudo: exclui cartão (saldo negativo)
+    if (a.kind === 'credit_card') return false; // cartão nunca soma saldo (é dívida)
+    if (scope === 'pessoal') return a.entity_id !== bizEntityId;
+    if (scope === 'empresa') return a.entity_id === bizEntityId;
+    return true; // tudo
   });
   const saldoContas = filteredAccts.reduce(
     (s, a) => s + Number(a.opening_balance) + (acctTx.get(a.id) ?? 0),

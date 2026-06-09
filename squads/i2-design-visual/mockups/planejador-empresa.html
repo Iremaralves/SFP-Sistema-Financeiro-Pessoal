@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>i2 · Planejador de Pagamentos — Junho 2026</title>
+<link rel="stylesheet" href="_theme.css" />
+<style>
+  /* ── Layout da página de mockup (apenas para exibir os 2 frames) ── */
+  .mockup-stage {
+    max-width: 1640px;
+    margin-inline: auto;
+    padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 48px) 80px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(36px, 5vw, 72px);
+  }
+  .mockup-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .frame-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--text-faint);
+  }
+
+  /* ── Frame Mobile: aspecto de celular ── */
+  .device-mobile {
+    width: 393px;
+    border-radius: 46px;
+    padding: 12px;
+    background: linear-gradient(160deg, #16161f, #08080d);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.6),
+      0 50px 90px -40px rgba(0,0,0,0.9),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .device-mobile__screen {
+    position: relative;
+    width: 369px;
+    height: 800px;
+    border-radius: 36px;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #0b0b16 0%, var(--bg) 42%, var(--bg-pure) 100%);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .device-mobile__screen::-webkit-scrollbar { display: none; }
+  /* notch */
+  .device-mobile__screen::before {
+    content: "";
+    position: absolute;
+    top: 12px; left: 50%; transform: translateX(-50%);
+    width: 116px; height: 30px;
+    background: #000;
+    border-radius: 99px;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  /* ── Frame Desktop ── */
+  .device-desktop {
+    width: 1180px;
+    max-width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #0b0b16 0%, var(--bg) 42%, var(--bg-pure) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 50px 100px -50px rgba(0,0,0,0.9);
+  }
+  .device-desktop__bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(255,255,255,0.015);
+  }
+  .device-desktop__dot { width: 11px; height: 11px; border-radius: 99px; background: rgba(255,255,255,0.14); }
+  .device-desktop__addr {
+    margin-left: 14px;
+    font-size: 11.5px; color: var(--text-ghost);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── O app em si ── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .app--mobile { padding: 52px 16px 40px; }
+  .app--desktop { padding: 30px clamp(24px, 3vw, 40px) 48px; }
+
+  /* Header */
+  .app-header { display: flex; flex-direction: column; gap: var(--space-4); }
+  .app-header__top {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  }
+  .app-brand { display: flex; align-items: center; gap: 11px; }
+  .app-brand__mark {
+    width: 38px; height: 38px; border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 18px;
+    background: var(--grad-i2);
+    box-shadow: var(--shadow-glow-i2);
+  }
+  .app-brand__txt { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .app-brand__name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .app-brand__sub { font-size: 11px; color: var(--text-faint); }
+
+  .btn--add {
+    padding: 9px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px; font-weight: 650;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+  }
+  @media (hover: hover) { .btn--add:hover { background: rgba(255,255,255,0.09); } }
+
+  /* Month pills */
+  .month-strip {
+    display: flex; gap: 7px;
+    overflow-x: auto; scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  }
+  .month-strip::-webkit-scrollbar { display: none; }
+  .month-pill {
+    flex: none;
+    padding: 8px 15px;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px; font-weight: 600;
+    color: var(--text-faint);
+    background: var(--bg-sunken);
+    border: 1px solid var(--hairline);
+    white-space: nowrap;
+    transition: color 160ms var(--ease), background 160ms var(--ease), border-color 160ms var(--ease);
+  }
+  .month-pill.is-active {
+    color: #1a1206;
+    background: var(--grad-i2);
+    border-color: transparent;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 8px 20px -12px rgba(245,158,11,0.6);
+  }
+  @media (hover: hover) { .month-pill:not(.is-active):hover { color: var(--text); background: rgba(255,255,255,0.06); } }
+
+  /* Hero */
+  .hero-i2 .anchor-number { color: var(--i2); }
+  .hero-i2 .anchor-number .currency,
+  .hero-i2 .anchor-number .cents { color: rgba(245,158,11,0.55); }
+  .hero-glyph {
+    position: absolute;
+    top: -30px; right: -10px;
+    font-size: 140px;
+    line-height: 1;
+    opacity: 0.05;
+    pointer-events: none;
+    filter: grayscale(0.2);
+  }
+
+  /* Cofre card internals */
+  .cofre-ledger {
+    display: flex; flex-direction: column;
+    border-radius: var(--radius-item);
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    background: var(--bg-sunken);
+  }
+  .ledger-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: var(--space-3);
+    padding: 13px var(--space-4);
+  }
+  .ledger-row + .ledger-row { border-top: 1px solid var(--hairline); }
+  .ledger-row__label { font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+  .ledger-row__label .sub { font-size: 11px; color: var(--text-ghost); }
+  .ledger-row__val {
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    font-size: 15px; font-weight: 650; letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .ledger-row__val.is-neg { color: var(--danger); }
+  .ledger-row--total {
+    background: rgba(245,158,11,0.07);
+    border-top: 1px solid rgba(245,158,11,0.18) !important;
+  }
+  .ledger-row--total .ledger-row__label {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(245,158,11,0.85);
+  }
+  .ledger-row--total .ledger-row__val {
+    font-size: 21px; font-weight: 800; color: var(--i2);
+  }
+
+  .reserva-line {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 13px var(--space-4);
+    border-radius: var(--radius-item);
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.16);
+  }
+  .reserva-line__icon {
+    flex: none; width: 36px; height: 36px;
+    display: grid; place-items: center; border-radius: 11px;
+    font-size: 16px;
+    color: var(--i2); background: rgba(245,158,11,0.14);
+  }
+  .reserva-line__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .reserva-line__name { font-size: 13.5px; font-weight: 600; }
+  .reserva-line__bal { font-size: 11.5px; color: var(--text-faint); }
+  .reserva-line__bal .tabular { color: var(--text-dim); font-weight: 600; }
+
+  .cofre-seal {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 2px;
+    padding: 9px 13px;
+    border-radius: var(--radius-item);
+    background: rgba(52,211,153,0.05);
+    border: 1px dashed rgba(52,211,153,0.22);
+    font-size: 11px;
+    color: rgba(52,211,153,0.85);
+    letter-spacing: 0.01em;
+  }
+  .cofre-seal b { color: var(--success); font-weight: 700; }
+
+  /* Pay list */
+  .day-group { display: flex; flex-direction: column; }
+  .day-group__head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-3);
+    padding: 12px var(--space-5) 9px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .day-group__title {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.13em;
+    color: var(--text-dim);
+  }
+  .day-group__chip {
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; height: 24px; padding: 0 7px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 800; letter-spacing: -0.02em;
+    color: #1a1206; background: var(--grad-i2);
+  }
+  .day-group__sum {
+    font-family: var(--num); font-variant-numeric: tabular-nums;
+    font-size: 12.5px; font-weight: 700; color: var(--text-dim);
+  }
+  .day-group__sum .lbl { color: var(--text-ghost); font-weight: 600; margin-right: 5px; }
+
+  /* item de pagamento (estende .list-row) */
+  .pay-row { padding-right: var(--space-4); }
+  .pay-row .list-row__title { display: flex; align-items: center; gap: 8px; }
+  .tag-prorata {
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 6px;
+    color: var(--casal); background: rgba(6,182,212,0.13);
+    border: 1px solid rgba(6,182,212,0.25);
+  }
+  .pay-row__right { display: flex; align-items: center; gap: var(--space-4); flex: none; }
+  .btn--pay {
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12.5px; font-weight: 700;
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.3);
+    color: var(--success);
+    box-shadow: none;
+    transition: background 140ms var(--ease), transform 140ms var(--ease);
+  }
+  .btn--pay:active { transform: translateY(1px) scale(0.98); }
+  @media (hover: hover) {
+    .btn--pay:hover { background: rgba(52,211,153,0.2); filter: none; }
+  }
+
+  /* Desktop: 2 colunas */
+  .desk-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1.25fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  .desk-grid__col { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  .page-foot {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-ghost);
+    letter-spacing: 0.04em;
+    padding-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="mockup-stage">
+
+    <!-- ════════════════════════════ MOBILE ════════════════════════════ -->
+    <div class="mockup-col">
+      <div class="frame-label">📱 Mobile · 375pt</div>
+      <div class="device-mobile">
+        <div class="device-mobile__screen">
+          <div class="app app--mobile stagger">
+
+            <!-- HEADER -->
+            <header class="app-header">
+              <div class="app-header__top">
+                <div class="app-brand">
+                  <div class="app-brand__mark">🏢</div>
+                  <div class="app-brand__txt">
+                    <span class="app-brand__name">i2 · Pagamentos</span>
+                    <span class="app-brand__sub">i2 Soluções Digitais</span>
+                  </div>
+                </div>
+                <button class="btn--add">+ Pessoa</button>
+              </div>
+              <div class="month-strip">
+                <span class="month-pill">Abr</span>
+                <span class="month-pill">Mai</span>
+                <span class="month-pill is-active">Junho 2026</span>
+                <span class="month-pill">Jul</span>
+                <span class="month-pill">Ago</span>
+                <span class="month-pill">Set</span>
+              </div>
+            </header>
+
+            <!-- ANCHOR HERO -->
+            <section class="anchor-hero anchor-hero--i2 hero-i2 lift">
+              <span class="hero-glyph">💸</span>
+              <span class="label-eyebrow">Total a desembolsar</span>
+              <div class="anchor-number tabular">
+                <span class="currency">R$</span>15.038<span class="cents">,92</span>
+              </div>
+              <div class="anchor-sub">
+                <span class="pill pill--danger">9 a pagar</span>
+                <span>· <b class="tabular">R$&nbsp;0</b> pago</span>
+                <span>· vence dia <b class="tabular">5</b> e <b class="tabular">20</b></span>
+              </div>
+            </section>
+
+            <!-- COFRE PJ CARD -->
+            <section class="glass-card col gap-4">
+              <div class="section-title" style="margin:0">
+                <span>Cofre da empresa</span>
+                <span class="section-title__meta">Inter PJ · Reserva i2</span>
+              </div>
+
+              <div class="cofre-ledger tabular">
+                <div class="ledger-row">
+                  <span class="ledger-row__label">🏦 Inter PJ <span class="sub">operacional</span></span>
+                  <span class="ledger-row__val">R$&nbsp;2.500,00</span>
+                </div>
+                <div class="ledger-row">
+                  <span class="ledger-row__label">A pagar <span class="sub">9 contas</span></span>
+                  <span class="ledger-row__val is-neg">− R$&nbsp;15.038,92</span>
+                </div>
+                <div class="ledger-row ledger-row--total">
+                  <span class="ledger-row__label">Resgatar do cofre</span>
+                  <span class="ledger-row__val">R$&nbsp;12.538,92</span>
+                </div>
+              </div>
+
+              <div class="reserva-line">
+                <div class="reserva-line__icon">📦</div>
+                <div class="reserva-line__body">
+                  <span class="reserva-line__name">Reserva i2</span>
+                  <span class="reserva-line__bal">saldo <span class="tabular">R$&nbsp;18.000,00</span></span>
+                </div>
+                <button class="btn btn--amber btn--sm tabular">Transferir R$&nbsp;12.538,92</button>
+              </div>
+
+              <div class="cofre-seal">
+                🔒 <span><b>Cofre da Família não aparece aqui</b> — é dinheiro pessoal.</span>
+              </div>
+            </section>
+
+            <!-- LISTA A PAGAR -->
+            <div class="section-title">
+              <span>A pagar</span>
+              <span class="section-title__meta">9 contas · 2 vencimentos</span>
+            </div>
+
+            <section class="solid-card">
+              <!-- DIA 5 -->
+              <div class="day-group">
+                <div class="day-group__head">
+                  <span class="day-group__title"><span class="day-group__chip">5</span> Junho · Folha ⚡PIX</span>
+                  <span class="day-group__sum"><span class="lbl">7×</span>R$&nbsp;11.388,71</span>
+                </div>
+                <div class="list">
+                  <div class="list-row pay-row" data-owner="iremar">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Pró-labore Iremar</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> vence dia 5</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;5.000,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Retirada de lucros</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> vence dia 5</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;3.000,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Pedro</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;1.200,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Mayana</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;750,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Alana</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Contadora</span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> serviço</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;500,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">Eduarda <span class="tag-prorata">proporcional 21/31</span></span>
+                      <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> bolsa · 1º mês</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;338,71</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DIA 20 -->
+              <div class="day-group" style="border-top:1px solid var(--hairline)">
+                <div class="day-group__head">
+                  <span class="day-group__title"><span class="day-group__chip">20</span> Junho · Impostos 🏦Boleto</span>
+                  <span class="day-group__sum"><span class="lbl">2×</span>R$&nbsp;3.150,21</span>
+                </div>
+                <div class="list">
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">DAS Simples Nacional</span>
+                      <span class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span> vence dia 20</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;2.600,21</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                  <div class="list-row pay-row" data-owner="i2">
+                    <div class="list-row__body">
+                      <span class="list-row__title">INSS</span>
+                      <span class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span> vence dia 20</span>
+                    </div>
+                    <div class="pay-row__right">
+                      <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                      <button class="btn--pay">✓ Pagar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div class="page-foot">i2 Soluções Digitais · Fechamento Junho 2026</div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════ DESKTOP ════════════════════════════ -->
+    <div class="mockup-col">
+      <div class="frame-label">🖥️ Desktop · 1180px</div>
+      <div class="device-desktop">
+        <div class="device-desktop__bar">
+          <span class="device-desktop__dot" style="background:#f87171"></span>
+          <span class="device-desktop__dot" style="background:#fbbf24"></span>
+          <span class="device-desktop__dot" style="background:#34d399"></span>
+          <span class="device-desktop__addr">financeiro.i2 / empresa / pagamentos</span>
+        </div>
+
+        <div class="app app--desktop stagger">
+
+          <!-- HEADER -->
+          <header class="app-header">
+            <div class="app-header__top">
+              <div class="app-brand">
+                <div class="app-brand__mark">🏢</div>
+                <div class="app-brand__txt">
+                  <span class="app-brand__name" style="font-size:17px">i2 · Pagamentos</span>
+                  <span class="app-brand__sub">i2 Soluções Digitais · Junho 2026</span>
+                </div>
+              </div>
+              <div class="row gap-3">
+                <div class="month-strip" style="max-width:420px">
+                  <span class="month-pill">Março</span>
+                  <span class="month-pill">Abril</span>
+                  <span class="month-pill">Maio</span>
+                  <span class="month-pill is-active">Junho 2026</span>
+                  <span class="month-pill">Julho</span>
+                  <span class="month-pill">Agosto</span>
+                </div>
+                <button class="btn--add">+ Pessoa/conta</button>
+              </div>
+            </div>
+          </header>
+
+          <div class="desk-grid">
+            <!-- COL ESQUERDA: HERO + COFRE -->
+            <div class="desk-grid__col">
+
+              <section class="anchor-hero anchor-hero--i2 hero-i2 lift">
+                <span class="hero-glyph">💸</span>
+                <span class="label-eyebrow">Total a desembolsar</span>
+                <div class="anchor-number tabular">
+                  <span class="currency">R$</span>15.038<span class="cents">,92</span>
+                </div>
+                <div class="anchor-sub">
+                  <span class="pill pill--danger">9 a pagar</span>
+                  <span>· <b class="tabular">R$&nbsp;0</b> pago</span>
+                  <span>· vence dia <b class="tabular">5</b> e <b class="tabular">20</b></span>
+                </div>
+              </section>
+
+              <section class="glass-card col gap-4">
+                <div class="section-title" style="margin:0">
+                  <span>Cofre da empresa</span>
+                  <span class="section-title__meta">Inter PJ · Reserva i2</span>
+                </div>
+
+                <div class="cofre-ledger tabular">
+                  <div class="ledger-row">
+                    <span class="ledger-row__label">🏦 Inter PJ <span class="sub">operacional</span></span>
+                    <span class="ledger-row__val">R$&nbsp;2.500,00</span>
+                  </div>
+                  <div class="ledger-row">
+                    <span class="ledger-row__label">A pagar <span class="sub">9 contas</span></span>
+                    <span class="ledger-row__val is-neg">− R$&nbsp;15.038,92</span>
+                  </div>
+                  <div class="ledger-row ledger-row--total">
+                    <span class="ledger-row__label">Resgatar do cofre</span>
+                    <span class="ledger-row__val">R$&nbsp;12.538,92</span>
+                  </div>
+                </div>
+
+                <div class="reserva-line">
+                  <div class="reserva-line__icon">📦</div>
+                  <div class="reserva-line__body">
+                    <span class="reserva-line__name">Reserva i2</span>
+                    <span class="reserva-line__bal">saldo <span class="tabular">R$&nbsp;18.000,00</span> · sobra <span class="tabular">R$&nbsp;5.461,08</span> após resgate</span>
+                  </div>
+                  <button class="btn btn--amber btn--sm tabular">Transferir R$&nbsp;12.538,92</button>
+                </div>
+
+                <div class="cofre-seal">
+                  🔒 <span><b>Cofre da Família não aparece aqui</b> — é dinheiro pessoal (Fator R).</span>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- COL DIREITA: LISTA A PAGAR -->
+            <div class="desk-grid__col">
+              <div class="section-title" style="margin:0">
+                <span>A pagar (9)</span>
+                <span class="section-title__meta">2 vencimentos · dia 5 e 20</span>
+              </div>
+
+              <section class="solid-card">
+                <!-- DIA 5 -->
+                <div class="day-group">
+                  <div class="day-group__head">
+                    <span class="day-group__title"><span class="day-group__chip">5</span> Junho · Folha ⚡PIX</span>
+                    <span class="day-group__sum"><span class="lbl">7 pagamentos</span>R$&nbsp;11.388,71</span>
+                  </div>
+                  <div class="list">
+                    <div class="list-row pay-row" data-owner="iremar">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Pró-labore Iremar</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> sócio · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;5.000,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Retirada de lucros</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> distribuição · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;3.000,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Pedro</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;1.200,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Mayana</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;750,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Alana</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> equipe · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Contadora</span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> serviço · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;500,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">Eduarda <span class="tag-prorata">proporcional 21/31</span></span>
+                        <span class="list-row__meta"><span class="pill pill--method">⚡ PIX</span> bolsa · 1º mês · vence dia 5</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;338,71</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DIA 20 -->
+                <div class="day-group" style="border-top:1px solid var(--hairline)">
+                  <div class="day-group__head">
+                    <span class="day-group__title"><span class="day-group__chip">20</span> Junho · Impostos 🏦Boleto</span>
+                    <span class="day-group__sum"><span class="lbl">2 pagamentos</span>R$&nbsp;3.150,21</span>
+                  </div>
+                  <div class="list">
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">DAS Simples Nacional</span>
+                        <span class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span> imposto · vence dia 20</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;2.600,21</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                    <div class="list-row pay-row" data-owner="i2">
+                      <div class="list-row__body">
+                        <span class="list-row__title">INSS</span>
+                        <span class="list-row__meta"><span class="pill pill--method">🏦 Boleto</span> imposto · vence dia 20</span>
+                      </div>
+                      <div class="pay-row__right">
+                        <span class="list-row__amount tabular">R$&nbsp;550,00</span>
+                        <button class="btn--pay">✓ Pagar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <div class="page-foot">i2 Soluções Digitais · Fechamento Junho 2026 · Cofre PF oculto por regra Fator R</div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

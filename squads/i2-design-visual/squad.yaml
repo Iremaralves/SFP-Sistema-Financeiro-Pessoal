@@ -1,0 +1,81 @@
+name: i2-design-visual
+description: >
+  Squad de design visual de alta fidelidade. Diferente do i2-redesign-completo
+  (que entregou documentos markdown), este squad entrega MOCKUPS HTML RENDERIZÁVEIS
+  — arquivos .html dark-mode glass, mobile + desktop, que o Iremar abre no navegador
+  e aprova pixel a pixel ANTES de virar código. Foco nas telas de decisão financeira:
+  Planejador de Pagamentos da Empresa, Dashboard Empresa e Dashboard Pessoal.
+  Entrega um design system compartilhado (_theme.css) + mockups que o usam, garantindo
+  consistência. Passa por crítica e refino antes de entregar.
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  mockups_dir: squads/i2-design-visual/mockups
+  prod_url: https://i2-finance.vercel.app
+  stack_real: Next.js 15 + Tailwind v4 (mockups em HTML/CSS puro mapeável pra Tailwind depois)
+
+  identidade_visual:
+    base: 'OLED dark (#05050a / #000)'
+    estilo: 'Glassmorphism com critério (não em tudo) + cantos generosos'
+    cores_responsavel:
+      iremar: '#3b82f6 → #6366f1 (azul-índigo)'
+      juliana: '#ec4899 → #f472b6 (rosa)'
+      i2: '#f59e0b → #d97706 (âmbar)'
+      casal: '#06b6d4 (ciano)'
+      success: '#34d399'
+      warning: '#fbbf24'
+      danger: '#f87171'
+    tipografia: 'tabular-nums em valores; número-âncora gigante (hierarquia radical)'
+    referencias: 'Nubank, Mercury, Stripe Dashboard, Linear, Arc — banking premium, não planilha'
+
+  modelo_real:
+    entidades: 'Família (PF) · i2 Soluções Digitais (PJ)'
+    contas:
+      pf: 'Nubank PF, Nubank Juliana (checking) · Cartão Nubank (credit) · Caixinha Nubank, NuInvest (investment = cofre PF)'
+      pj: 'Inter PJ (company/operacional) · [reserva/investimento PJ — A CADASTRAR]'
+    regra_critica: >
+      COFRE PF (Caixinha/NuInvest da Família) e COFRE PJ (investimento da i2) NUNCA se
+      cruzam. O Planejador da Empresa só pode resgatar de cofre PJ. Filtro por entity_id,
+      não só por kind. Misturar fere o Fator R.
+    folha_i2_mensal:
+      fixas: 'Pró-labore Iremar R$5.000 (dia5 pix) · Retirada lucros R$3.000 (dia5) · DAS R$2.600,21 (dia20 boleto) · INSS R$550 (dia20)'
+      pessoas: 'Pedro R$1.200 · Alana R$550 · Mayana R$750 · Contadora R$500 · Eduarda (bolsa proporcional 1º mês: 500×21/31=R$338,71)'
+
+  telas_alvo:
+    - 'Planejador de Pagamentos da Empresa (/empresa/pagamentos) — PRIORIDADE, é a que o Iremar reprovou'
+    - 'Dashboard Empresa (visão geral PJ: a pagar, a receber, saldo)'
+    - 'Dashboard Pessoal (a pagar, a receber, semáforo posso-usar-o-cartão, fatura)'
+
+deliverables:
+  primary:
+    - '_theme.css — design system compartilhado (tokens + componentes base)'
+    - 'planejador-empresa.html — mockup mobile + desktop'
+    - 'dashboard-empresa.html — mockup mobile + desktop'
+    - 'dashboard-pessoal.html — mockup mobile + desktop'
+    - 'index.html — abre tudo num lugar só pra aprovação'
+    - '00-direcao.md — conceito visual + princípios'
+  forbidden:
+    - 'Entregar ASCII ou markdown como "mockup" — tem que ser HTML renderizável'
+    - 'Mostrar cofre PF no contexto da empresa (mistura PF/PJ)'
+    - 'Trocar dark mode por light'
+    - 'Inventar dado fora do modelo_real'
+
+pipeline:
+  - id: direcao
+    name: "Fase 1 — Direção + Design System (_theme.css)"
+    agent: olivia_director
+  - id: mockups
+    name: "Fase 2 — Mockups HTML (3 telas em paralelo)"
+    agent: sofia_ui
+  - id: critica
+    name: "Fase 3 — Crítica de qualidade + consistência"
+    agent: marina_critic
+  - id: refino
+    name: "Fase 4 — Refino dos mockups"
+    agent: sofia_ui
+  - id: entrega
+    name: "Fase 5 — Index + validação Iremar"
+    agent: iremar_validator

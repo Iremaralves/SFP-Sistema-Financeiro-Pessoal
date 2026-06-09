@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>i2 Finance · Mockups para aprovação</title>
+<link rel="stylesheet" href="_theme.css" />
+<style>
+  body { background: radial-gradient(120% 80% at 50% -10%, #0b0b16 0%, #05050a 45%, #000 100%); min-height: 100vh; }
+  .wrap { max-width: 880px; margin-inline: auto; padding: clamp(40px,7vw,80px) clamp(20px,5vw,40px) 100px; }
+  .eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.35); }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -0.02em; color: #fff; margin: 6px 0 14px; line-height: 1.05; }
+  .lead { color: rgba(255,255,255,0.55); font-size: 15px; line-height: 1.6; max-width: 60ch; }
+  .grid { display: grid; gap: 16px; margin-top: 40px; }
+  .card {
+    display: block; text-decoration: none; padding: 24px;
+    border-radius: 22px; background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(20px);
+    transition: all 0.18s ease;
+  }
+  .card:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); transform: translateY(-2px); }
+  .card__top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .card__emoji { font-size: 26px; }
+  .card__title { color: #fff; font-size: 18px; font-weight: 650; }
+  .card__tag { margin-left: auto; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 4px 10px; border-radius: 999px; }
+  .tag--amber { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+  .tag--indigo { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .card__desc { color: rgba(255,255,255,0.45); font-size: 13px; line-height: 1.55; }
+  .arrow { color: rgba(255,255,255,0.3); float: right; margin-top: -18px; font-size: 20px; }
+  .foot { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.3); font-size: 12px; line-height: 1.7; }
+  .badge-logo { display:inline-flex; width:34px; height:34px; border-radius:11px; align-items:center; justify-content:center; background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; font-weight:800; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:26px;">
+      <span class="badge-logo">i2</span>
+      <div>
+        <p class="eyebrow">i2 Finance · Design</p>
+        <p style="color:rgba(255,255,255,0.4);font-size:12px;">Mockups para aprovação · jun/2026</p>
+      </div>
+    </div>
+
+    <p class="eyebrow">Reformulação visual</p>
+    <h1>Telas de decisão financeira</h1>
+    <p class="lead">
+      Três telas refeitas em alta fidelidade — dark premium, hierarquia radical (o número que
+      importa é gigante), e a separação sagrada entre cofre da Família e cofre da i2.
+      Abra cada uma, veja mobile e desktop lado a lado, e me diga o que aprova ou ajusta.
+    </p>
+
+    <div class="grid">
+      <a class="card" href="planejador-empresa.html">
+        <div class="card__top">
+          <span class="card__emoji">💸</span>
+          <span class="card__title">Planejador de Pagamentos · Empresa</span>
+          <span class="card__tag tag--amber">prioridade</span>
+        </div>
+        <p class="card__desc">
+          A tela que você reprovou, refeita. Total a desembolsar gigante, card do cofre PJ
+          (Reserva i2 → Inter PJ) com a caixinha da Família travada de fora, e a folha do mês
+          com proração da Eduarda. <span class="arrow">→</span>
+        </p>
+      </a>
+
+      <a class="card" href="dashboard-empresa.html">
+        <div class="card__top">
+          <span class="card__emoji">🏢</span>
+          <span class="card__title">Dashboard · Empresa</span>
+          <span class="card__tag tag--amber">i2</span>
+        </div>
+        <p class="card__desc">
+          Saldo consolidado da i2, a pagar × a receber, e a timeline de projetos previstos.
+          <span class="arrow">→</span>
+        </p>
+      </a>
+
+      <a class="card" href="dashboard-pessoal.html">
+        <div class="card__top">
+          <span class="card__emoji">👨‍👩‍👧</span>
+          <span class="card__title">Dashboard · Pessoal (Iremar)</span>
+          <span class="card__tag tag--indigo">PF · admin</span>
+        </div>
+        <p class="card__desc">
+          Semáforo "posso usar o cartão?", fatura com sua parte e % do orçamento, contas dessa
+          semana e o que vai receber. <span class="arrow">→</span>
+        </p>
+      </a>
+
+      <a class="card" href="dashboard-juliana.html" style="border-color:rgba(236,72,153,0.22)">
+        <div class="card__top">
+          <span class="card__emoji">👩</span>
+          <span class="card__title">Dashboard · Juliana</span>
+          <span class="card__tag" style="background:rgba(236,72,153,0.15);color:#f9a8d4;border:1px solid rgba(236,72,153,0.3)">operadora</span>
+        </div>
+        <p class="card__desc">
+          A mesma base pessoal, mas pela ótica da Juliana: travada em "Pessoal" (sem empresa),
+          CTA grande de categorizar a fatura, sua parte destacada em rosa. Mobile-first — é como
+          ela usa. <span class="arrow">→</span>
+        </p>
+      </a>
+    </div>
+
+    <p class="foot">
+      🔒 Regra aplicada em todas: cofre da Família (Caixinha, NuInvest) e cofre da i2 (Reserva)
+      nunca se cruzam.<br/>
+      Mockups estáticos — sem dado real ainda. Depois de aprovados, viram componentes Tailwind no app.
+    </p>
+  </div>
+</body>
+</html>

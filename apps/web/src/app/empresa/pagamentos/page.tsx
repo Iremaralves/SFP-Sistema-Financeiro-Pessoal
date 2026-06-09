@@ -69,7 +69,7 @@ export default async function PlanejadorPagamentosPage({
 
   // ── Contas: Inter PJ + cofres (investment) ────────────────────────────
   const { data: accountRows } = await supabase
-    .from('accounts').select('id, name, kind, opening_balance')
+    .from('accounts').select('id, name, kind, opening_balance, entity_id')
     .eq('household_id', profile.household_id).eq('active', true);
 
   const { data: allTx } = await supabase
@@ -83,8 +83,10 @@ export default async function PlanejadorPagamentosPage({
   const accountBalance = (a: { id: string; opening_balance: number | null }) =>
     Number(a.opening_balance ?? 0) + (balByAccount.get(a.id) ?? 0);
 
-  const interPJ   = (accountRows ?? []).find(a => a.kind === 'company');
-  const cofres    = (accountRows ?? []).filter(a => a.kind === 'investment')
+  // CRÍTICO: só contas da i2 (PJ). Cofre da Família NUNCA entra aqui (Fator R).
+  const i2Accounts = (accountRows ?? []).filter(a => a.entity_id === i2Entity?.id);
+  const interPJ   = i2Accounts.find(a => a.kind === 'company');
+  const cofres    = i2Accounts.filter(a => a.kind === 'investment')
     .map(a => ({ id: a.id, name: a.name, balance: accountBalance(a) }));
 
   const saldoInterPJ = interPJ ? accountBalance(interPJ) : 0;

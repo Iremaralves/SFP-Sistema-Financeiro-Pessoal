@@ -13,6 +13,7 @@ import { IncomeCard, type IncomeLine } from './IncomeCard';
 import { QuickActions } from './QuickActions';
 import { ProfileScopeToggle } from './ProfileScopeToggle';
 import { AnchorHero } from './AnchorHero';
+import { BudgetGauge } from './BudgetGauge';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -41,6 +42,8 @@ interface Props {
   bills?: Bill[];
   scope?: ProfileScope;
   metrics?: DashboardMetrics;
+  budgetTeto?: number;
+  boletosPF?: number;
 }
 
 function fmt(n: number) {
@@ -60,7 +63,7 @@ function fmtCycleLabel(start: string, end: string): string {
   return `${sd}/${sm} → ${ed}/${em}`;
 }
 
-export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics }: Props) {
+export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics, budgetTeto = 8000, boletosPF = 0 }: Props) {
   const settlement = calculateInvoiceSettlement(transactions, month);
 
   const proLabore = incomeRecords.filter((r) => r.kind === 'pro_labore').reduce((s, r) => s + r.amount, 0);
@@ -126,6 +129,15 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
             aPagarTotal={metrics.aPagarTotal}
             aReceberTotal={metrics.aReceberTotal}
             saldoContas={metrics.saldoContas}
+          />
+        )}
+
+        {/* Semáforo do cartão — só no perfil Pessoal (decisão do Iremar) */}
+        {scope === 'pessoal' && (
+          <BudgetGauge
+            teto={budgetTeto}
+            faturaParte={settlement.iremarPart}
+            boletosPF={boletosPF}
           />
         )}
 

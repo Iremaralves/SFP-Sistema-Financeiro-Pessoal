@@ -1,0 +1,103 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { setBudgetTeto } from '@/app/_actions/budget';
+
+interface Props {
+  teto: number;
+  faturaParte: number;   // sua parte da fatura do cartão
+  boletosPF: number;     // boletos/pix pessoais que o Iremar paga
+}
+
+function fmt(n: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+}
+
+export function BudgetGauge({ teto, faturaParte, boletosPF }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(teto));
+
+  const comprometido = faturaParte + boletosPF;
+  const disponivel = teto - comprometido;
+  const pctUsado = teto > 0 ? Math.min(100, (comprometido / teto) * 100) : 100;
+
+  // Estado do semáforo
+  const estado =
+    pctUsado >= 95 ? { key: 'vermelho', emoji: '🔴', label: 'Estourou', color: '#f87171', glow: 'rgba(239,68,68,0.16)' }
+    : pctUsado >= 80 ? { key: 'amarelo', emoji: '🟡', label: 'Apertado', color: '#fbbf24', glow: 'rgba(245,158,11,0.16)' }
+    : { key: 'verde', emoji: '🟢', label: 'Tranquilo', color: '#34d399', glow: 'rgba(16,185,129,0.16)' };
+
+  function salvarTeto() {
+    const v = parseFloat(draft.replace(/\./g, '').replace(',', '.'));
+    startTransition(async () => {
+      const res = await setBudgetTeto(v);
+      if (res.ok) { setEditing(false); router.refresh(); }
+    });
+  }
+
+  const segFatura = teto > 0 ? Math.min(100, (faturaParte / teto) * 100) : 0;
+  const segBoletos = teto > 0 ? Math.min(100 - segFatura, (boletosPF / teto) * 100) : 0;
+
+  return (
+    <section className="rounded-3xl p-5 md:p-6 relative overflow-hidden"
+      style={{ background: `radial-gradient(150% 130% at 100% 0%, ${estado.glow}, transparent 58%), rgba(255,255,255,0.045)`, border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
+      <p className="text-white/40 text-[11px] uppercase tracking-widest font-semibold mb-1">Posso usar o cartão?</p>
+
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-4xl md:text-5xl font-bold tabular tracking-tight" style={{ color: disponivel >= 0 ? 'white' : '#f87171' }}>
+            {fmt(Math.abs(disponivel))}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${estado.color}22`, color: estado.color, border: `1px solid ${estado.color}55` }}>
+              {estado.emoji} {estado.label}
+            </span>
+            <span className="text-white/40 text-[11px]">{disponivel >= 0 ? 'disponível pra gastar' : 'acima do teto'}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold tabular" style={{ color: estado.color }}>{pctUsado.toFixed(0)}%</div>
+          <div className="text-white/30 text-[10px] uppercase tracking-wider">do teto</div>
+        </div>
+      </div>
+
+      {/* Barra estratificada: fatura + boletos + sobra */}
+      <div className="flex h-3 rounded-full overflow-hidden mt-4" style={{ background: 'rgba(255,255,255,0.05)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' }}>
+        <span style={{ width: `${segFatura}%`, background: 'linear-gradient(90deg,#3b82f6,#6366f1)' }} />
+        <span style={{ width: `${segBoletos}%`, background: 'linear-gradient(90deg,#ec4899,#f472b6)' }} />
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-white/45">
+        <span className="inline-flex items-center gap-1.5"><i className="w-2 h-2 rounded-sm inline-block" style={{ background: 'linear-gradient(90deg,#3b82f6,#6366f1)' }} /> Fatura (sua parte) <b className="text-white/70 tabular">{fmt(faturaParte)}</b></span>
+        <span className="inline-flex items-center gap-1.5"><i className="w-2 h-2 rounded-sm inline-block" style={{ background: 'linear-gradient(90deg,#ec4899,#f472b6)' }} /> Boletos PF <b className="text-white/70 tabular">{fmt(boletosPF)}</b></span>
+      </div>
+
+      {/* Teto editável */}
+      <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <span className="text-white/40 text-xs">Teto do mês</span>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text" inputMode="decimal" value={draft}
+              onChange={e => setDraft(e.target.value)}
+              autoFocus
+              className="w-24 text-right rounded-lg px-2 py-1 text-white text-sm tabular focus:outline-none"
+              style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(59,130,246,0.4)' }}
+            />
+            <button onClick={salvarTeto} disabled={isPending}
+              className="text-[11px] font-semibold px-2 py-1 rounded-lg" style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
+              {isPending ? '...' : 'OK'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => { setDraft(String(teto)); setEditing(true); }}
+            className="text-sm font-bold tabular text-white flex items-center gap-1.5">
+            {fmt(teto)} <span className="text-white/30 text-xs">✎</span>
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}

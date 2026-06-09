@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { getEffectiveScope } from '@/lib/profile-scope';
+import { getBudgetTeto } from '@/app/_actions/budget';
 import { toTransactions } from '@/lib/mappers';
 import { currentInvoiceCycle } from '@i2fin/core';
 import { DashboardAdmin } from '@/components/DashboardAdmin';
@@ -162,6 +163,12 @@ export default async function DashboardPage() {
     saldoContas,
   };
 
+  // Teto do orçamento pessoal (semáforo do cartão) + boletos PF do Iremar
+  const budgetTeto = await getBudgetTeto();
+  const boletosPFIremar = bills
+    .filter(b => b.paid_by === 'iremar' && b.responsible !== 'i2')
+    .reduce((s, b) => s + b.amount, 0);
+
   return (
     <div className="min-h-screen pb-24 md:pl-60">
       {profile.role === 'admin' ? (
@@ -175,6 +182,8 @@ export default async function DashboardPage() {
           bills={bills}
           scope={scope}
           metrics={dashboardMetrics}
+          budgetTeto={budgetTeto}
+          boletosPF={boletosPFIremar}
         />
       ) : (
         <DashboardOperator

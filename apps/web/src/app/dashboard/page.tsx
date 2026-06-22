@@ -129,6 +129,13 @@ export default async function DashboardPage() {
   const aPagarTotal = billsScoped.reduce((sum, b) => sum + b.amount, 0);
   const aPagarCount = billsScoped.length;
 
+  // Atrasados + contas da semana (próximos 7 dias) — server-side (usa todayDay já calculado)
+  const overdueScoped = billsScoped.filter(b => b.status === 'overdue');
+  const overdueTotal = overdueScoped.reduce((s, b) => s + b.amount, 0);
+  const weekItems = billsScoped
+    .filter(b => b.due_day >= todayDay && b.due_day <= todayDay + 6)
+    .map(b => ({ id: b.id, description: b.description, due_day: b.due_day, amount: b.amount }));
+
   // Total a receber do mês (income_records: pro-labore + juliana_transfer + outros)
   const aReceberTotal = (incomeRecords ?? []).reduce((s, r) => s + Number(r.amount), 0);
 
@@ -190,6 +197,9 @@ export default async function DashboardPage() {
           metrics={dashboardMetrics}
           budgetTeto={budgetTeto}
           boletosPF={boletosPFIremar}
+          overdueCount={overdueScoped.length}
+          overdueTotal={overdueTotal}
+          weekItems={weekItems}
         />
       ) : (
         <DashboardOperator

@@ -14,6 +14,8 @@ import { QuickActions } from './QuickActions';
 import { ProfileScopeToggle } from './ProfileScopeToggle';
 import { AnchorHero } from './AnchorHero';
 import { BudgetGauge } from './BudgetGauge';
+import { AlertStack } from './AlertStack';
+import { WeekStrip, type WeekItem } from './WeekStrip';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -44,6 +46,9 @@ interface Props {
   metrics?: DashboardMetrics;
   budgetTeto?: number;
   boletosPF?: number;
+  overdueCount?: number;
+  overdueTotal?: number;
+  weekItems?: WeekItem[];
 }
 
 function fmt(n: number) {
@@ -63,7 +68,7 @@ function fmtCycleLabel(start: string, end: string): string {
   return `${sd}/${sm} → ${ed}/${em}`;
 }
 
-export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics, budgetTeto = 8000, boletosPF = 0 }: Props) {
+export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics, budgetTeto = 2500, overdueCount = 0, overdueTotal = 0, weekItems = [] }: Props) {
   const settlement = calculateInvoiceSettlement(transactions, month);
 
   const proLabore = incomeRecords.filter((r) => r.kind === 'pro_labore').reduce((s, r) => s + r.amount, 0);
@@ -110,49 +115,31 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
 
       <div className="px-4 md:px-8 pb-28 md:pb-12 space-y-3 page-container fade-up-stagger">
 
-        {/* AnchorHero — número-chave por escopo (Hierarquia Radical) */}
-        {metrics && (
-          <AnchorHero
-            scope={scope}
-            faturaTotal={metrics.faturaTotal}
-            saldoContas={metrics.saldoContas}
-            cycle={cycle}
-          />
-        )}
+        {/* ── ZONA 0: Alertas (atrasado / teto / sem responsável) ───────── */}
+        <AlertStack
+          overdueCount={overdueCount}
+          overdueTotal={overdueTotal}
+          unassignedCount={unassigned}
+          cartaoEstourou={scope === 'pessoal' && settlement.iremarPart > budgetTeto}
+        />
 
-        {/* Ações rápidas — atalhos pra o que Iremar mais usa */}
-        {metrics && (
-          <QuickActions
-            scope={scope}
-            faturaTotal={metrics.faturaTotal}
-            aPagarCount={metrics.aPagarCount}
-            aPagarTotal={metrics.aPagarTotal}
-            aReceberTotal={metrics.aReceberTotal}
-            saldoContas={metrics.saldoContas}
-          />
-        )}
-
-        {/* Semáforo do cartão — só no perfil Pessoal (decisão do Iremar) */}
-        {scope === 'pessoal' && (
-          <BudgetGauge
-            teto={budgetTeto}
-            faturaParte={settlement.iremarPart}
-            boletosPF={boletosPF}
-          />
-        )}
-
-        {/* Alerta sem responsável */}
-        {unassigned > 0 && (
-          <Link href="/categorizar"
-            className="rounded-2xl p-4 flex items-center gap-3 transition-all active:scale-[0.98] cursor-pointer lift-hover"
-            style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-            <span className="text-xl">⚠️</span>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-amber-300 text-sm">{unassigned} sem responsável</p>
-              <p className="text-amber-400/60 text-xs mt-0.5">Toque aqui para categorizar →</p>
-            </div>
-            <span className="text-amber-300 text-base flex-shrink-0">›</span>
-          </Link>
+        {scope === 'pessoal' ? (
+          <>
+            {/* ── ZONA 1: Posso usar o cartão? (herói) ───────────────── */}
+            <BudgetGauge teto={budgetTeto} faturaParte={settlement.iremarPart} />
+            {/* ── ZONA 2: Esta semana ─────────────────────────────────── */}
+            <WeekStrip items={weekItems} overdueTotal={overdueTotal} />
+          </>
+        ) : (
+          <>
+            {/* Empresa/Tudo: número-âncora + atalhos no topo */}
+            {metrics && (
+              <AnchorHero scope={scope} faturaTotal={metrics.faturaTotal} saldoContas={metrics.saldoContas} cycle={cycle} />
+            )}
+            {metrics && (
+              <QuickActions scope={scope} faturaTotal={metrics.faturaTotal} aPagarCount={metrics.aPagarCount} aPagarTotal={metrics.aPagarTotal} aReceberTotal={metrics.aReceberTotal} saldoContas={metrics.saldoContas} />
+            )}
+          </>
         )}
 
         {/* ── A Pagar + A Receber lado a lado (gestão prioritária) ───────── */}

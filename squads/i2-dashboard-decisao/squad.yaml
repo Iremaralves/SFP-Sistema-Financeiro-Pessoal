@@ -1,0 +1,67 @@
+name: i2-dashboard-decisao
+description: >
+  Squad híbrido: controladoria financeira + design. Não entrega só um dashboard bonito —
+  primeiro DIAGNOSTICA as finanças do Iremar (custos fixos × variáveis, conta corrente ×
+  cartão, impacto da fatura no orçamento, "preciso frear ou fazer mais dinheiro?") e DEPOIS
+  redesenha o dashboard inicial pra responder num olhar as perguntas de gestão. Entrega
+  diagnóstico acionável + mockup HTML renderizável (reusa o design system aprovado).
+
+version: "1.0"
+language: pt-BR
+
+context:
+  project_root: /Users/iremaralvesii/Financeiro
+  prod_url: https://i2-finance.vercel.app
+  supabase_project: jvfdzcouychlfxxnzams
+  household_id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  design_system: squads/i2-design-visual/mockups/_theme.css (reusar/evoluir)
+
+  perguntas_que_o_dashboard_deve_responder:
+    contas_a_pagar:
+      - Quais contas ainda faltam pagar no mês atual
+      - Tem algo atrasado?
+      - Quais os próximos pagamentos
+      - Os totais (mês)
+      - Total de pagamentos da semana
+    cartao:
+      - Quanto está a fatura atual
+      - Quanto é de Iremar / Juliana / casal / i2
+      - Impacto do custo do cartão no orçamento do Iremar
+      - Preciso frear os gastos? Preciso fazer mais dinheiro?
+    gestao:
+      - Custos saem da conta corrente E do cartão — gerir os dois não é simples
+      - Custos fixos × variáveis, que podem cair no cartão ou na conta
+      - Iremar quer AJUDA com isso, não só um painel
+
+  dados_reais:
+    renda_iremar: 'Pró-labore R$ 5.000 + Retirada de lucros R$ 3.000 = R$ 8.000/mês (da i2) + reembolso do cartão (gastos i2)'
+    contas_fixas_PF: 'Escola Helena 1.393,43 · Escola Isabela 950 · Condomínio 250 · IPTU 119,35 · IPVA 128,01 · Terapia 220 · Internet 100 · Plano saúde 355 · Apartamento 175 · Feira 1.200 · Reserva 800 · Tesouro 1.000'
+    cartao_divisao_ciclo: 'fatura ~8.320 — Juliana ~3.742 (own+casal/2) · Iremar ~2.900 · casal ~2.635 · i2 ~1.857 (líquido, reembolsado)'
+    cartao_fixos_exemplos: 'assinaturas no cartão: Netflix, Apple.com, iCloud, Google Workspace(i2), Anthropic(i2), Supabase(i2), Submagic(i2), Canva(i2), Mapfre seguro 180,64×12'
+    cartao_variaveis_exemplos: 'mercado (Atacadão, Qualipreco), restaurantes, posto (Premmia/Petrobras), farmácia (Drogasil), uber'
+    cofre_PF: 'reserva ~R$ 7.795 (após saque) — Caixinha Nubank + NuInvest'
+
+deliverables:
+  primary:
+    - Diagnóstico financeiro acionável (fixo×variável, conta×cartão, orçamento, frear/fazer-mais)
+    - Arquitetura do novo dashboard (o que responde cada pergunta)
+    - Mockup HTML renderizável (mobile + desktop, dark/glass, reusa _theme.css)
+    - Plano de implementação + validação do Iremar
+  forbidden:
+    - Entregar só painel bonito sem o diagnóstico/ajuda financeira
+    - Misturar PF e PJ (Fator R)
+    - ASCII como "mockup" — tem que ser HTML
+
+pipeline:
+  - id: diagnostico
+    name: "Fase 1 — Diagnóstico financeiro (controladoria)"
+    agent: beatriz
+  - id: arquitetura
+    name: "Fase 2 — Arquitetura do dashboard"
+    agent: marcus
+  - id: mockup
+    name: "Fase 3 — Mockup HTML do dashboard"
+    agent: sofia
+  - id: plano
+    name: "Fase 4 — Plano + validação Iremar"
+    agent: iremar_validator

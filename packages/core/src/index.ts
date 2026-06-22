@@ -7,3 +7,5 @@ export type { ParseResult } from './parser.js';
 export { detectDuplicates } from './duplicate.js';
 export { calculateSettlement, calculateInvoiceSettlement, calculatePersonalCashflow, currentInvoiceCycle } from './settlement.js';
 export { reconcile } from './reconcile.js';
+export { splitFixedVariable } from './spending.js';
+export type { SpendingBreakdown, SpendingCategory } from './spending.js';

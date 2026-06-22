@@ -16,6 +16,7 @@ import { BudgetGauge } from './BudgetGauge';
 import { AlertStack } from './AlertStack';
 import { WeekStrip, type WeekItem } from './WeekStrip';
 import { SplitBar } from './SplitBar';
+import { FinancialHealth } from './FinancialHealth';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -49,6 +50,9 @@ interface Props {
   overdueCount?: number;
   overdueTotal?: number;
   weekItems?: WeekItem[];
+  renda?: number;
+  fixosPF?: number;
+  guardado?: number;
 }
 
 function fmt(n: number) {
@@ -68,7 +72,7 @@ function fmtCycleLabel(start: string, end: string): string {
   return `${sd}/${sm} → ${ed}/${em}`;
 }
 
-export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics, budgetTeto = 2500, overdueCount = 0, overdueTotal = 0, weekItems = [] }: Props) {
+export function DashboardAdmin({ profile, transactions, incomeRecords, month, cycle, upcoming = [], bills = [], scope = 'tudo', metrics, budgetTeto = 2500, overdueCount = 0, overdueTotal = 0, weekItems = [], renda = 0, fixosPF = 0, guardado = 0 }: Props) {
   const settlement = calculateInvoiceSettlement(transactions, month);
 
   const proLabore = incomeRecords.filter((r) => r.kind === 'pro_labore').reduce((s, r) => s + r.amount, 0);
@@ -248,6 +252,17 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
             />
           )}
         </div>
+
+        {/* ── ZONA 4: Saúde financeira + coaching (só Pessoal) ─────────── */}
+        {scope === 'pessoal' && (
+          <FinancialHealth
+            renda={renda}
+            fixosPF={fixosPF}
+            faturaParte={settlement.iremarPart}
+            guardado={guardado}
+            transactions={transactions}
+          />
+        )}
 
         {/* Casal + i2 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">

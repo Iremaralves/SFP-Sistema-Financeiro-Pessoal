@@ -182,6 +182,17 @@ export default async function DashboardPage() {
     .filter(b => b.paid_by === 'iremar' && b.responsible !== 'i2')
     .reduce((s, b) => s + b.amount, 0);
 
+  // Saúde financeira (Onda 3): renda, fixos PF mensais (pagos ou não), poupança
+  const renda = (commitments ?? [])
+    .filter(c => c.description === 'Pró-labore Iremar' || c.description === 'Retirada de lucros')
+    .reduce((s, c) => s + Number(c.amount), 0);
+  const fixosPFMensal = (commitments ?? [])
+    .filter(c => c.responsible !== 'i2' && c.paid_by === 'iremar')
+    .reduce((s, c) => s + Number(c.amount), 0);
+  const guardadoMensal = (commitments ?? [])
+    .filter(c => c.description === 'Tesouro Direto' || c.description === 'Reserva de segurança')
+    .reduce((s, c) => s + Number(c.amount), 0);
+
   return (
     <div className="min-h-screen pb-24 md:pl-60">
       {profile.role === 'admin' ? (
@@ -200,6 +211,9 @@ export default async function DashboardPage() {
           overdueCount={overdueScoped.length}
           overdueTotal={overdueTotal}
           weekItems={weekItems}
+          renda={renda}
+          fixosPF={fixosPFMensal}
+          guardado={guardadoMensal}
         />
       ) : (
         <DashboardOperator

@@ -7,7 +7,6 @@ import { BottomNav } from './BottomNav';
 import { TransactionList } from './TransactionList';
 import { LogoutButton } from './LogoutButton';
 import { DonutSplit } from './charts/DonutSplit';
-import { Sparkline } from './charts/Sparkline';
 import { BillsCard, type Bill } from './BillsCard';
 import { IncomeCard, type IncomeLine } from './IncomeCard';
 import { QuickActions } from './QuickActions';
@@ -16,6 +15,7 @@ import { AnchorHero } from './AnchorHero';
 import { BudgetGauge } from './BudgetGauge';
 import { AlertStack } from './AlertStack';
 import { WeekStrip, type WeekItem } from './WeekStrip';
+import { SplitBar } from './SplitBar';
 import type { ProfileScope } from '@/lib/profile-scope';
 
 interface DashboardMetrics {
@@ -188,20 +188,14 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
                 </>
               );
             })()}
-            {/* Sparkline placeholder: usa splits como série proxy (visual). */}
-            <div className="mt-4 hidden md:block">
-              <Sparkline
-                data={[
-                  Math.max(1, settlement.totalFatura * 0.6),
-                  Math.max(1, settlement.totalFatura * 0.7),
-                  Math.max(1, settlement.totalFatura * 0.55),
-                  Math.max(1, settlement.totalFatura * 0.85),
-                  Math.max(1, settlement.totalFatura * 0.78),
-                  Math.max(1, settlement.totalFatura),
-                ]}
-                width={320}
-                height={48}
-                color="#60a5fa"
+            {/* Divisão por responsável — barra 4 cores (substitui o sparkline fake) */}
+            <div className="mt-5">
+              <SplitBar
+                iremarOwn={iremarOwn}
+                julianaOwn={julianaOwn}
+                casalTotal={settlement.casalTotal}
+                i2={settlement.i2Part}
+                total={settlement.totalFatura}
               />
             </div>
           </div>
@@ -231,8 +225,8 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
           </div>
         </div>
 
-        {/* Equação Iremar + Juliana — lado-a-lado em md+ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Equação — só Iremar no Pessoal (a da Juliana é ruído pra decisão dele) */}
+        <div className={`grid grid-cols-1 gap-3 ${scope === 'pessoal' ? '' : 'md:grid-cols-2'}`}>
           <EquacaoCard
             nome="Iremar"
             pessoal={iremarOwn}
@@ -242,15 +236,17 @@ export function DashboardAdmin({ profile, transactions, incomeRecords, month, cy
             accentBg="rgba(59,130,246,0.08)"
             accentBorder="rgba(59,130,246,0.2)"
           />
-          <EquacaoCard
-            nome="Juliana"
-            pessoal={julianaOwn}
-            casalHalf={casalHalf}
-            total={settlement.julianaPart}
-            accentColor="var(--accent-juliana)"
-            accentBg="rgba(236,72,153,0.08)"
-            accentBorder="rgba(236,72,153,0.2)"
-          />
+          {scope !== 'pessoal' && (
+            <EquacaoCard
+              nome="Juliana"
+              pessoal={julianaOwn}
+              casalHalf={casalHalf}
+              total={settlement.julianaPart}
+              accentColor="var(--accent-juliana)"
+              accentBg="rgba(236,72,153,0.08)"
+              accentBorder="rgba(236,72,153,0.2)"
+            />
+          )}
         </div>
 
         {/* Casal + i2 */}
